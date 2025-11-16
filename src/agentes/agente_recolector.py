@@ -1,336 +1,232 @@
-"""Agente recolector con comunicación y aprendizaje (Ejercicios 4-6)."""
+"""
+Agentes recolectores - Ejercicios 4, 5 y 6
+"""
 
-from typing import List, Dict, Set, Tuple, Optional, Any
 import random
-from collections import defaultdict, deque
+from typing import List, Dict, Any, Set
+from collections import deque
 from .agente_base import AgenteBase
 
 
-class AgenteRecolector(AgenteBase):
-    """
-    Agente recolector que implementa:
-    - Ejercicio 4: Comunicación entre agentes
-    - Ejercicio 5: Memoria espacial (aprendizaje)
-    - Ejercicio 6: Competencia por recursos
-    """
+class AgenteRecolectorBase(AgenteBase):
+    """Agente recolector básico (código original mejorado)"""
     
-    def __init__(
-        self,
-        x: int = 0,
-        y: int = 0,
-        modo: str = 'cooperativo',  # 'cooperativo' o 'competitivo'
-        con_aprendizaje: bool = False
-    ):
-        """
-        Inicializa el agente recolector.
-        
-        Args:
-            x: Posición inicial en x
-            y: Posición inicial en y
-            modo: Modo de operación
-            con_aprendizaje: Si debe aprender patrones espaciales
-        """
-        super().__init__(None, x, y)
-        
-        self.modo = modo
-        self.con_aprendizaje = con_aprendizaje
-        
-        # Recursos recolectados
+    def __init__(self, x: int, y: int, agent_id: str = None):
+        super().__init__(x, y, agent_id)
         self.comida_recolectada = 0
-        self.energia = 100
-        
-        # Ejercicio 4: Sistema de comunicación
-        self.mensajes_recibidos: List[Dict] = []
-        self.objetivos_compartidos: Set[Tuple[int, int]] = set()
-        self.objetivo_actual: Optional[Tuple[int, int]] = None
-        
-        # Ejercicio 5: Memoria espacial (mapa de calor)
-        self.mapa_calor: Dict[Tuple[int, int], int] = defaultdict(int)
-        self.posiciones_con_comida: Dict[Tuple[int, int], int] = defaultdict(int)
-        
-        # Ejercicio 6: Competencia
-        self.agentes_cercanos: List[str] = []
-        self.recursos_robados = 0
-        self.bloqueos_sufridos = 0
-        
-        # Pathfinding
-        self.plan: deque = deque()
+        self.plan: List[str] = []
+        self._entorno = None  # Referencia al entorno para planificar_ruta
     
-    def percibir(self, entorno: Any) -> Dict:
-        """
-        Percibe el entorno de recolección.
-        
-        Returns:
-            Dict con información del entorno
-        """
-        percepcion = {
-            'hay_comida': entorno.hay_comida(self.x, self.y),
-            'comida_visible': [],
-            'agentes_visibles': [],
-            'vecinos_validos': []
-        }
-        
-        # Detectar comida en rango de visión (radio 5)
-        radio = 5
-        for dx in range(-radio, radio + 1):
-            for dy in range(-radio, radio + 1):
-                pos_x, pos_y = self.x + dx, self.y + dy
-                if entorno.es_posicion_valida(pos_x, pos_y):
-                    if entorno.hay_comida(pos_x, pos_y):
-                        percepcion['comida_visible'].append((pos_x, pos_y))
-        
-        # Detectar otros agentes (Ejercicio 6: competencia)
-        if hasattr(entorno, 'obtener_agentes_en'):
-            agentes_cerca = entorno.obtener_agentes_en(self.x, self.y, radio=3)
-            percepcion['agentes_visibles'] = [a.id for a in agentes_cerca if a.id != self.id]
-            self.agentes_cercanos = percepcion['agentes_visibles']
-        
-        # Vecinos válidos
-        for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            nx, ny = self.x + dx, self.y + dy
-            if entorno.es_posicion_valida(nx, ny):
-                percepcion['vecinos_validos'].append((nx, ny))
-        
-        return percepcion
+    def percibir(self, entorno):
+        return entorno.obtener_comida_cercana(self.x, self.y, radio=5)
     
-    def decidir(self, percepcion: Dict) -> str:
-        """
-        Decide la acción basándose en percepción, comunicación y aprendizaje.
-        
-        Args:
-            percepcion: Información del entorno
+    def planificar_ruta(self, objetivo, entorno):
+        """BFS para encontrar camino al objetivo"""
+        if objetivo is None:
+            return []
             
-        Returns:
-            Acción a ejecutar
-        """
-        # Si hay comida aquí, recolectar
-        if percepcion['hay_comida']:
-            return 'recolectar'
+        cola = deque([(self.x, self.y, [])])
+        visitados = {(self.x, self.y)}
         
-        # Si hay un plan activo, seguirlo
-        if self.plan:
-            return self.plan.popleft()
-        
-        # Ejercicio 4: Procesar mensajes de otros agentes
-        self._procesar_mensajes()
-        
-        # Decidir objetivo
-        objetivo = self._seleccionar_objetivo(percepcion)
-        
-        if objetivo:
-            # Planificar ruta hacia objetivo
-            camino = self._buscar_camino(objetivo, percepcion['vecinos_validos'])
-            if camino:
-                self.plan.extend(camino)
-                return self.plan.popleft()
-        
-        # Ejercicio 5: Si tiene aprendizaje, ir a zonas con más comida
-        if self.con_aprendizaje:
-            mejor_zona = self._mejor_zona_aprendida()
-            if mejor_zona:
-                camino = self._buscar_camino(mejor_zona, percepcion['vecinos_validos'])
-                if camino:
-                    self.plan.extend(camino)
-                    return self.plan.popleft()
-        
-        # Movimiento aleatorio
-        if percepcion['vecinos_validos']:
-            return self._direccion_hacia(random.choice(percepcion['vecinos_validos']))
-        
-        return 'esperar'
-    
-    def _seleccionar_objetivo(self, percepcion: Dict) -> Optional[Tuple[int, int]]:
-        """
-        Selecciona un objetivo considerando comunicación y competencia.
-        
-        Args:
-            percepcion: Información del entorno
+        while cola:
+            x, y, camino = cola.popleft()
             
-        Returns:
-            Posición objetivo o None
-        """
-        comida_disponible = set(percepcion['comida_visible'])
+            if (x, y) == objetivo:
+                return camino
+                
+            for dx, dy, direccion in [(0, -1, 'arriba'), (0, 1, 'abajo'),
+                                    (-1, 0, 'izquierda'), (1, 0, 'derecha')]:
+                nx, ny = x + dx, y + dy
+                if (entorno.es_valida(nx, ny) and 
+                    (nx, ny) not in visitados and 
+                    not entorno.hay_obstaculo(nx, ny)):
+                    visitados.add((nx, ny))
+                    cola.append((nx, ny, camino + [direccion]))
         
-        # Ejercicio 4: Filtrar objetivos ya reclamados por otros (cooperativo)
-        if self.modo == 'cooperativo':
-            comida_disponible -= self.objetivos_compartidos
-        
-        # Ejercicio 6: En modo competitivo, preferir comida cerca de otros agentes
-        if self.modo == 'competitivo' and self.agentes_cercanos:
-            # Ser más agresivo si hay competencia
-            comida_lista = list(comida_disponible)
-            if comida_lista:
-                return min(comida_lista, key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y))
-        
-        # Seleccionar comida más cercana
-        if comida_disponible:
-            return min(
-                comida_disponible,
-                key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y)
-            )
-        
-        return None
+        return []
     
-    def _buscar_camino(
-        self,
-        objetivo: Tuple[int, int],
-        vecinos_validos: List[Tuple[int, int]]
-    ) -> List[str]:
-        """
-        Búsqueda simple de camino (BFS simplificado).
-        
-        Args:
-            objetivo: Posición objetivo
-            vecinos_validos: Vecinos a considerar
+    def decidir(self, percepcion):
+        if not self.plan:
+            if percepcion:
+                # Elegir comida más cercana
+                objetivo = min(percepcion, 
+                             key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y))
+                self.plan = self.planificar_ruta(objetivo, self._entorno)
             
-        Returns:
-            Lista de direcciones
-        """
-        # Movimiento simple hacia objetivo (greedy)
-        dx = objetivo[0] - self.x
-        dy = objetivo[1] - self.y
-        
-        movimientos = []
-        
-        if abs(dx) > abs(dy):
-            if dx > 0:
-                movimientos.append('derecha')
+            if self.plan:
+                return self.plan.pop(0)
             else:
-                movimientos.append('izquierda')
+                return random.choice(['arriba', 'abajo', 'izquierda', 'derecha'])
         else:
-            if dy > 0:
-                movimientos.append('abajo')
-            else:
-                movimientos.append('arriba')
-        
-        return movimientos[:3]  # Máximo 3 pasos
+            return self.plan.pop(0)
     
-    def _direccion_hacia(self, posicion: Tuple[int, int]) -> str:
-        """Calcula dirección hacia una posición."""
-        dx = posicion[0] - self.x
-        dy = posicion[1] - self.y
+    def actuar(self, decision, entorno):
+        self._entorno = entorno  # Guardar referencia para planificar_ruta
         
-        if abs(dx) > abs(dy):
-            return 'derecha' if dx > 0 else 'izquierda'
-        else:
-            return 'abajo' if dy > 0 else 'arriba'
-    
-    def actuar(self, accion: str, entorno: Any) -> None:
-        """
-        Ejecuta la acción en el entorno.
-        
-        Args:
-            accion: Acción a ejecutar
-            entorno: Entorno de recolección
-        """
-        if accion == 'recolectar':
-            # Recolectar comida
-            if entorno.recolectar_comida(self.x, self.y):
-                self.comida_recolectada += 1
-                self.energia += 20
-                
-                # Ejercicio 5: Registrar éxito en mapa de calor
-                if self.con_aprendizaje:
-                    self.posiciones_con_comida[(self.x, self.y)] += 1
-                    self._actualizar_mapa_calor(self.x, self.y, recompensa=10)
-                
-                # Limpiar objetivo actual
-                self.objetivo_actual = None
-        
-        elif accion in ['arriba', 'abajo', 'izquierda', 'derecha']:
-            # Mover
-            dx, dy = {
-                'arriba': (0, -1),
-                'abajo': (0, 1),
-                'izquierda': (-1, 0),
-                'derecha': (1, 0)
-            }[accion]
+        if decision in ['arriba', 'abajo', 'izquierda', 'derecha']:
+            self.mover(decision, entorno)
             
-            nuevo_x, nuevo_y = self.x + dx, self.y + dy
-            
-            if entorno.es_posicion_valida(nuevo_x, nuevo_y):
-                self.x, self.y = nuevo_x, nuevo_y
-                self.energia -= 1
-                
-                # Ejercicio 5: Actualizar mapa de calor
-                if self.con_aprendizaje:
-                    self._actualizar_mapa_calor(self.x, self.y, recompensa=1)
+            # Recolectar comida si está en esta posición
+            if entorno.hay_comida(self.x, self.y):
+                if entorno.recolectar_comida(self.x, self.y):
+                    self.comida_recolectada += 1
+                    self.energia += 10
+                    self.plan = []  # Limpiar plan actual
+
+
+class AgenteRecolectorComunicativo(AgenteRecolectorBase):
+    """Ejercicio 4: Agente que se comunica con otros para evitar conflictos"""
     
-    # Ejercicio 4: Comunicación
-    def enviar_mensaje(self, otros_agentes: List['AgenteRecolector'], tipo: str, contenido: Any):
-        """
-        Envía mensaje a otros agentes.
-        
-        Args:
-            otros_agentes: Lista de agentes receptores
-            tipo: Tipo de mensaje
-            contenido: Contenido del mensaje
-        """
+    def __init__(self, x: int, y: int, agent_id: str = None):
+        super().__init__(x, y, agent_id)
+        self.mensajes: List[Dict] = []
+        self.objetivos_reservados: Set[tuple] = set()
+    
+    def enviar_mensaje(self, otros_agentes, tipo: str, contenido: Any):
         for agente in otros_agentes:
-            if agente.id != self.id:
+            if hasattr(agente, 'recibir_mensaje'):
                 agente.recibir_mensaje(self.id, tipo, contenido)
     
     def recibir_mensaje(self, remitente: str, tipo: str, contenido: Any):
-        """
-        Recibe mensaje de otro agente.
-        
-        Args:
-            remitente: ID del agente remitente
-            tipo: Tipo de mensaje
-            contenido: Contenido del mensaje
-        """
-        self.mensajes_recibidos.append({
+        self.mensajes.append({
             'de': remitente,
             'tipo': tipo,
             'contenido': contenido
         })
     
-    def _procesar_mensajes(self):
-        """Procesa mensajes recibidos."""
-        for mensaje in self.mensajes_recibidos:
-            if mensaje['tipo'] == 'objetivo_reclamado':
-                # Otro agente va por este objetivo
-                self.objetivos_compartidos.add(mensaje['contenido'])
-        
-        self.mensajes_recibidos.clear()
+    def procesar_mensajes(self):
+        comida_reportada = []
+        for msg in self.mensajes:
+            if msg['tipo'] == 'comida_encontrada':
+                comida_reportada.append(msg['contenido'])
+            elif msg['tipo'] == 'objetivo_reservado':
+                self.objetivos_reservados.add(msg['contenido'])
+        self.mensajes.clear()
+        return comida_reportada
     
-    # Ejercicio 5: Aprendizaje espacial
-    def _actualizar_mapa_calor(self, x: int, y: int, recompensa: int):
-        """
-        Actualiza el mapa de calor con la recompensa.
+    def decidir(self, percepcion):
+        # Procesar mensajes antes de decidir
+        comida_compartida = self.procesar_mensajes()
         
-        Args:
-            x: Posición x
-            y: Posición y
-            recompensa: Valor de recompensa
-        """
-        self.mapa_calor[(x, y)] += recompensa
-        
-        # Propagar a vecinos (decaimiento)
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            self.mapa_calor[(x + dx, y + dy)] += recompensa // 2
+        if not self.plan:
+            # Combinar percepciones locales y compartidas
+            todas_opciones = list(set(percepcion + comida_compartida))
+            # Filtrar objetivos ya reservados
+            opciones_disponibles = [obj for obj in todas_opciones 
+                                  if obj not in self.objetivos_reservados]
+            
+            if opciones_disponibles:
+                objetivo = min(opciones_disponibles,
+                             key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y))
+                self.plan = self.planificar_ruta(objetivo, self._entorno)
+                # Reservar objetivo
+                self.objetivos_reservados.add(objetivo)
+            
+            if self.plan:
+                return self.plan.pop(0)
+            else:
+                return random.choice(['arriba', 'abajo', 'izquierda', 'derecha'])
+        else:
+            return self.plan.pop(0)
+
+
+class AgenteRecolectorConAprendizaje(AgenteRecolectorBase):
+    """Ejercicio 5: Agente que aprende áreas con más comida"""
     
-    def _mejor_zona_aprendida(self) -> Optional[Tuple[int, int]]:
-        """
-        Retorna la mejor zona según el aprendizaje.
-        
-        Returns:
-            Posición de mejor zona o None
-        """
-        if not self.mapa_calor:
-            return None
-        
-        return max(self.mapa_calor.items(), key=lambda x: x[1])[0]
+    def __init__(self, x: int, y: int, agent_id: str = None):
+        super().__init__(x, y, agent_id)
+        self.memoria_comida: Dict[tuple, int] = {}  # (x,y): frecuencia
+        self.areas_productivas: Set[tuple] = set()  # (area_x, area_y)
     
-    def get_estadisticas(self) -> Dict:
-        """Retorna estadísticas del agente."""
-        return {
-            'id': self.id,
-            'posicion': (self.x, self.y),
-            'comida_recolectada': self.comida_recolectada,
-            'energia': self.energia,
-            'modo': self.modo,
-            'zonas_aprendidas': len(self.mapa_calor),
-            'objetivos_compartidos': len(self.objetivos_compartidos),
-            'agentes_cercanos': len(self.agentes_cercanos)
-        }
+    def actualizar_memoria(self, posicion: tuple, encontro_comida: bool):
+        if posicion not in self.memoria_comida:
+            self.memoria_comida[posicion] = 0
+        
+        if encontro_comida:
+            self.memoria_comida[posicion] += 1
+        
+        # Actualizar áreas productivas periódicamente
+        if self.energia % 10 == 0:
+            self.identificar_areas_productivas()
+    
+    def identificar_areas_productivas(self):
+        # Agrupar por áreas de 2x2
+        areas = {}
+        for (x, y), freq in self.memoria_comida.items():
+            area = (x // 2, y // 2)
+            if area not in areas:
+                areas[area] = []
+            areas[area].append(freq)
+        
+        # Identificar áreas con alta frecuencia
+        self.areas_productivas.clear()
+        for area, frecuencias in areas.items():
+            if frecuencias and sum(frecuencias) / len(frecuencias) > 0.3:
+                self.areas_productivas.add(area)
+    
+    def decidir(self, percepcion):
+        # Actualizar memoria
+        self.actualizar_memoria((self.x, self.y), self._entorno.hay_comida(self.x, self.y))
+        
+        if not self.plan:
+            opciones_priorizadas = []
+            
+            if percepcion:
+                # Priorizar comida en áreas productivas
+                for comida in percepcion:
+                    area_comida = (comida[0] // 2, comida[1] // 2)
+                    if area_comida in self.areas_productivas:
+                        opciones_priorizadas.insert(0, comida)
+                    else:
+                        opciones_priorizadas.append(comida)
+            elif self.areas_productivas:
+                # Ir a áreas productivas si no hay comida visible
+                area_objetivo = random.choice(list(self.areas_productivas))
+                centro_x = area_objetivo[0] * 2 + 1
+                centro_y = area_objetivo[1] * 2 + 1
+                opciones_priorizadas = [(centro_x, centro_y)]
+            
+            if opciones_priorizadas:
+                objetivo = min(opciones_priorizadas,
+                             key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y))
+                self.plan = self.planificar_ruta(objetivo, self._entorno)
+            
+            if self.plan:
+                return self.plan.pop(0)
+            else:
+                return random.choice(['arriba', 'abajo', 'izquierda', 'derecha'])
+        else:
+            return self.plan.pop(0)
+
+
+class AgenteCompetitivo(AgenteRecolectorComunicativo):
+    """Ejercicio 6: Agente competitivo por recursos limitados"""
+    
+    def __init__(self, x: int, y: int, agent_id: str = None, estrategia: str = 'agresiva'):
+        super().__init__(x, y, agent_id)
+        self.estrategia = estrategia
+        self.conflictos_ganados = 0
+        self.conflictos_perdidos = 0
+    
+    def detectar_rivales_cercanos(self, otros_agentes, radio: int = 2):
+        rivales = []
+        for agente in otros_agentes:
+            if agente.id != self.id:
+                distancia = abs(agente.x - self.x) + abs(agente.y - self.y)
+                if distancia <= radio:
+                    rivales.append(agente)
+        return rivales
+    
+    def evaluar_competencia(self, objetivo, otros_agentes):
+        rivales = self.detectar_rivales_cercanos(otros_agentes)
+        
+        if self.estrategia == 'agresiva':
+            return True  # Siempre competir
+        elif self.estrategia == 'conservadora':
+            return len(rivales) <= 1  # Competir solo si hay pocos rivales
+        else:  # 'evasiva'
+            return len(rivales) == 0  # Competir solo si no hay rivales
+    
+    def decidir(self, percepcion):
+        # Lógica de decisión con evaluación competitiva
+        return super().decidir(percepcion)

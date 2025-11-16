@@ -1,83 +1,75 @@
 """
-Simulación Ejercicio 2: Diferentes tipos de suciedad con distintos valores.
+Simulación Ejercicio 2: Diferentes tipos de suciedad con distintos valores
 """
 
 import sys
-sys.path.insert(0, '.')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.agentes.agente_limpieza import AgenteLimpieza
-from src.entornos.entorno_limpieza import EntornoLimpieza
-from src.utils.visualizacion import mostrar_grid, limpiar_pantalla
-from src.config.parametros import CONFIG_LIMPIEZA, PASOS_SIMULACION
-import time
+from src.agentes.agente_Limpieza import AgenteLimpiezaConTipos
+from src.entornos.entorno_limpieza import EntornoLimpiezaConTipos
+from src.utils.visualizacion import Visualizador
+from src.utils.estadisticas import EstadisticasLimpieza
+from src.config.parametros import CONFIG_EJERCICIO_2
 
 
 def simular_ejercicio2():
-    """Ejecuta la simulación del ejercicio 2."""
-    print("\n" + "=" * 70)
-    print("EJERCICIO 2: TIPOS DE SUCIEDAD CON DIFERENTES VALORES")
-    print("=" * 70)
-    print("\nTipos de suciedad:")
-    print("  💨 Polvo: 1 punto")
-    print("  💩 Mugre: 3 puntos")
-    print("  🗑️  Basura: 5 puntos")
+    """Ejecuta la simulación del ejercicio 2"""
+    print("=== EJERCICIO 2: TIPOS DE SUCIEDAD CON VALORES ===")
+    print("Objetivo: Agregar diferentes tipos de suciedad con distintos valores\n")
     
-    # Crear entorno con tipos de suciedad
-    entorno = EntornoLimpieza(
-        ancho=CONFIG_LIMPIEZA['ancho'],
-        alto=CONFIG_LIMPIEZA['alto'],
-        num_suciedad=CONFIG_LIMPIEZA['num_suciedad'],
-        num_obstaculos=0,
-        tipos_suciedad=True  # Activar tipos de suciedad
+    config = CONFIG_EJERCICIO_2
+    entorno = EntornoLimpiezaConTipos(
+        config['ancho_grid'], 
+        config['alto_grid'], 
+        config['num_suciedad']
     )
     
-    # Crear agente
-    agente = AgenteLimpieza(x=0, y=0, con_memoria=True)
+    agente = AgenteLimpiezaConTipos(*config['posicion_agente'])
+    estadisticas = EstadisticasLimpieza()
+    visualizador = Visualizador()
     
-    print(f"\nConfiguración:")
-    print(f"  - Grid: {entorno.ancho}x{entorno.alto}")
-    print(f"  - Suciedad total: {entorno.get_suciedad_restante()}")
+    # Configurar simulación
+    entorno.agregar_agente(agente)
+    estadisticas.iniciar()
     
-    input("\nPresiona Enter para comenzar...")
+    print("Leyenda: P=Polvo(1p), M=Mancha(2p), B=Barro(3p)")
+    print("Estado inicial del entorno:")
+    visualizador.mostrar_entorno_limpieza(entorno, agente)
     
-    # Simulación
-    for paso in range(PASOS_SIMULACION):
-        agente.update(entorno)
+    # Ejecutar simulación
+    for paso in range(config['max_pasos']):
+        resultado = entorno.ejecutar_paso()
+        estadisticas.registrar_paso(entorno, agente)
         
-        # Mostrar cada 5 pasos
-        if paso % 5 == 0 or entorno.get_suciedad_restante() == 0:
-            limpiar_pantalla()
-            
-            stats = agente.get_estadisticas()
-            mostrar_grid(
-                entorno,
-                [agente],
-                f"EJERCICIO 2 - Paso {paso + 1}/{PASOS_SIMULACION}",
-                {
-                    'Suciedad limpiada': stats['suciedad_limpiada'],
-                    'Puntos totales': stats['puntos_totales'],
-                    'Suciedad restante': entorno.get_suciedad_restante(),
-                    'Por tipo': str(stats['suciedad_por_tipo'])
-                }
-            )
-            time.sleep(0.5)
+        if paso % 5 == 0 or len(entorno.suciedad) == 0:
+            print(f"--- Paso {paso + 1} ---")
+            visualizador.mostrar_entorno_limpieza(entorno, agente)
+            visualizador.mostrar_estadisticas_agente(agente)
         
-        if entorno.get_suciedad_restante() == 0:
-            print("\n✅ ¡Toda la suciedad ha sido limpiada!")
+        # Condición de terminación
+        if len(entorno.suciedad) == 0:
+            print("¡ÉXITO! Toda la suciedad ha sido limpiada.")
             break
     
-    # Estadísticas finales
-    print("\n" + "=" * 70)
-    print("ESTADÍSTICAS FINALES")
-    print("=" * 70)
+    # Resultados finales
+    print("\n" + "="*50)
+    print("SIMULACIÓN COMPLETADA")
+    print("="*50)
+    estadisticas.mostrar_resumen(agente)
     
-    stats_finales = agente.get_estadisticas()
-    print(f"\nSuciedad limpiada por tipo:")
-    for tipo, cantidad in stats_finales['suciedad_por_tipo'].items():
-        print(f"  {tipo}: {cantidad}")
+    # Métricas específicas del ejercicio 2
+    print(f"\nMétricas específicas Ejercicio 2:")
+    print(f"Puntos por tipo de suciedad:")
+    for tipo, cantidad in agente.tipos_limpiados.items():
+        valor = entorno.tipos_suciedad[tipo]['valor']
+        puntos_tipo = cantidad * valor
+        print(f"  {tipo}: {cantidad} unidades × {valor}p = {puntos_tipo}p")
     
-    print(f"\nPuntos totales: {stats_finales['puntos_totales']}")
-    print(f"Eficiencia: {stats_finales['eficiencia']:.2%}")
+    eficiencia_puntos = (agente.puntos_totales / 
+                        (sum(env['valor'] for env in entorno.tipos_suciedad.values()) * 
+                         config['num_suciedad']) * 100)
+    print(f"\nEficiencia en puntos: {eficiencia_puntos:.1f}%")
 
 
 if __name__ == "__main__":

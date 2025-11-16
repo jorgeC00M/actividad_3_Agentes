@@ -1,150 +1,78 @@
-"""Entorno de recolección con comida y múltiples agentes."""
+"""
+Entornos de recolección - Para ejercicios 4, 5 y 6
+"""
 
-from typing import Dict, Set, Tuple, List, Any
 import random
+from typing import Set, Dict, Any, List, Tuple
 from .entorno_base import EntornoBase
 
 
 class EntornoRecoleccion(EntornoBase):
-    """
-    Entorno de recolección para ejercicios 4-6.
+    """Entorno de recolección con comida y obstáculos (código original mejorado)"""
     
-    Características:
-    - Comida distribuida en el grid
-    - Soporte para múltiples agentes
-    - Recursos limitados (Ejercicio 6: competencia)
-    """
-    
-    def __init__(
-        self,
-        ancho: int = 15,
-        alto: int = 15,
-        num_comida: int = 20,
-        competitivo: bool = False
-    ):
-        """
-        Inicializa el entorno de recolección.
-        
-        Args:
-            ancho: Ancho del grid
-            alto: Alto del grid
-            num_comida: Cantidad de comida
-            competitivo: Si es modo competitivo
-        """
+    def __init__(self, ancho: int, alto: int, num_comida: int = 10, num_obstaculos: int = 8):
         super().__init__(ancho, alto)
-        
-        self.num_comida_inicial = num_comida
-        self.competitivo = competitivo
-        
-        # Estado
-        self.comida: Set[Tuple[int, int]] = set()
-        self.agentes: List[Any] = []
-        
-        self.reset()
+        self.comida: Dict[Tuple[int, int], int] = {}
+        self.obstaculos: Set[Tuple[int, int]] = set()
+        self._generar_comida(num_comida)
+        self._generar_obstaculos(num_obstaculos)
     
-    def reset(self) -> None:
-        """Reinicia el entorno."""
-        self.comida.clear()
-        self.paso_actual = 0
-        
-        # Generar comida aleatoria
-        for _ in range(self.num_comida_inicial):
-            while True:
+    def _generar_comida(self, cantidad: int):
+        """Genera comida aleatoria en el grid"""
+        for _ in range(cantidad):
+            x = random.randint(0, self.ancho - 1)
+            y = random.randint(0, self.alto - 1)
+            # Evitar superposición con obstáculos
+            while (x, y) in self.obstaculos:
                 x = random.randint(0, self.ancho - 1)
                 y = random.randint(0, self.alto - 1)
-                if (x, y) not in self.comida:
-                    self.comida.add((x, y))
-                    break
+            self.comida[(x, y)] = random.randint(1, 3)  # Valor de la comida
     
-    def agregar_agente(self, agente: Any) -> None:
-        """Agrega un agente al entorno."""
-        self.agentes.append(agente)
+    def _generar_obstaculos(self, cantidad: int):
+        """Genera obstáculos aleatorios en el grid"""
+        for _ in range(cantidad):
+            x = random.randint(0, self.ancho - 1)
+            y = random.randint(0, self.alto - 1)
+            self.obstaculos.add((x, y))
     
     def hay_comida(self, x: int, y: int) -> bool:
-        """Verifica si hay comida en una posición."""
+        """Verifica si hay comida en una posición"""
         return (x, y) in self.comida
     
+    def hay_obstaculo(self, x: int, y: int) -> bool:
+        """Verifica si hay un obstáculo en la posición"""
+        return (x, y) in self.obstaculos
+    
     def recolectar_comida(self, x: int, y: int) -> bool:
-        """
-        Recolecta comida en una posición.
-        
-        Returns:
-            True si se recolectó comida
-        """
+        """Recolecta comida de una posición"""
         if (x, y) in self.comida:
-            self.comida.remove((x, y))
+            del self.comida[(x, y)]
             return True
         return False
     
-    def obtener_agentes_en(self, x: int, y: int, radio: int = 1) -> List[Any]:
-        """
-        Obtiene agentes en un radio de una posición.
-        
-        Args:
-            x: Coordenada x
-            y: Coordenada y
-            radio: Radio de búsqueda
-            
-        Returns:
-            Lista de agentes en el radio
-        """
-        agentes_cercanos = []
-        for agente in self.agentes:
-            dist = abs(agente.x - x) + abs(agente.y - y)
-            if dist <= radio:
-                agentes_cercanos.append(agente)
-        return agentes_cercanos
+    def obtener_comida_cercana(self, x: int, y: int, radio: int = 5) -> List[Tuple[int, int]]:
+        """Obtiene posiciones de comida dentro del radio"""
+        comida_cercana = []
+        for (fx, fy) in self.comida:
+            distancia = abs(fx - x) + abs(fy - y)
+            if distancia <= radio:
+                comida_cercana.append((fx, fy))
+        return comida_cercana
     
-    def step(self) -> None:
-        """Avanza un paso en la simulación."""
-        self.paso_actual += 1
-        
-        # Ejercicio 6: Regenerar comida aleatoriamente en modo competitivo
-        if self.competitivo and random.random() < 0.1:
-            if len(self.comida) < self.num_comida_inicial:
-                x = random.randint(0, self.ancho - 1)
-                y = random.randint(0, self.alto - 1)
-                self.comida.add((x, y))
+    def actualizar(self):
+        """El entorno básico no cambia con el tiempo"""
+        pass
+
+
+class EntornoRecoleccionCompetitivo(EntornoRecoleccion):
+    """Ejercicio 6: Entorno con recursos limitados para competencia"""
     
-    def get_comida_restante(self) -> int:
-        """Retorna la cantidad de comida restante."""
-        return len(self.comida)
+    def __init__(self, ancho: int, alto: int, num_comida: int = 5, num_obstaculos: int = 5):
+        # Menos recursos para crear competencia
+        super().__init__(ancho, alto, num_comida, num_obstaculos)
     
-    def render(self, agentes: list = None) -> str:
-        """
-        Genera representación visual del entorno.
-        
-        Args:
-            agentes: Lista de agentes a mostrar
-            
-        Returns:
-            String con representación del grid
-        """
-        grid = []
-        agentes_a_mostrar = agentes or self.agentes
-        agentes_pos = {}
-        
-        # Manejar múltiples agentes en la misma posición
-        for a in agentes_a_mostrar:
-            pos = (a.x, a.y)
-            if pos not in agentes_pos:
-                agentes_pos[pos] = []
-            agentes_pos[pos].append(a)
-        
-        for y in range(self.alto):
-            fila = []
-            for x in range(self.ancho):
-                if (x, y) in agentes_pos:
-                    # Si hay múltiples agentes, mostrar número
-                    num = len(agentes_pos[(x, y)])
-                    if num > 1:
-                        fila.append(f'{num}🤖')
-                    else:
-                        fila.append('🤖')
-                elif (x, y) in self.comida:
-                    fila.append('🍎')
-                else:
-                    fila.append('⬜')
-            grid.append(' '.join(fila))
-        
-        return '\n'.join(grid)
+    def actualizar(self):
+        """En entorno competitivo, la comida puede reaparecer lentamente"""
+        if self.tiempo % 10 == 0 and len(self.comida) < 3:
+            # Reponer algo de comida periódicamente
+            self._generar_comida(1)

@@ -1,8 +1,12 @@
-# Paquete de entornos (mundos donde viven los agentes).
-"""Módulo de entornos."""
-
 from .entorno_base import EntornoBase
-from .entorno_limpieza import EntornoLimpieza
-from .entorno_recoleccion import EntornoRecoleccion
+from .entorno_limpieza import EntornoLimpieza, EntornoLimpiezaConTipos, EntornoLimpiezaConObstaculos
+from .entorno_recoleccion import EntornoRecoleccion, EntornoRecoleccionCompetitivo
 
-__all__ = ['EntornoBase', 'EntornoLimpieza', 'EntornoRecoleccion']
+__all__ = [
+    'EntornoBase',
+    'EntornoLimpieza',
+    'EntornoLimpiezaConTipos', 
+    'EntornoLimpiezaConObstaculos',
+    'EntornoRecoleccion',
+    'EntornoRecoleccionCompetitivo'
+]

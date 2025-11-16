@@ -1,89 +1,69 @@
 """
-Simulación Ejercicio 1: Agente limpiador con memoria de lugares visitados.
+Simulación Ejercicio 1: Agente limpiador con memoria de lugares visitados
 """
 
 import sys
-sys.path.insert(0, '.')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.agentes.agente_limpieza import AgenteLimpieza
+from src.agentes.agente_limpieza import AgenteLimpiezaConMemoria
 from src.entornos.entorno_limpieza import EntornoLimpieza
-from src.utils.visualizacion import mostrar_grid, limpiar_pantalla
-from src.config.parametros import CONFIG_LIMPIEZA, PASOS_SIMULACION
-import time
+from src.utils.visualizacion import Visualizador
+from src.utils.estadisticas import EstadisticasLimpieza
+from src.config.parametros import CONFIG_EJERCICIO_1
 
 
 def simular_ejercicio1():
-    """Ejecuta la simulación del ejercicio 1."""
-    print("\n" + "=" * 70)
-    print("EJERCICIO 1: AGENTE LIMPIADOR CON MEMORIA")
-    print("=" * 70)
-    print("\nCaracterísticas:")
-    print("  ✓ El agente recuerda lugares visitados")
-    print("  ✓ Prioriza explorar áreas no visitadas")
-    print("  ✓ Evita recorrer el mismo lugar innecesariamente")
+    """Ejecuta la simulación del ejercicio 1"""
+    print("=== EJERCICIO 1: AGENTE LIMPIADOR CON MEMORIA ===")
+    print("Objetivo: Implementar un agente que recuerde lugares ya visitados\n")
     
-    # Crear entorno
+    config = CONFIG_EJERCICIO_1
     entorno = EntornoLimpieza(
-        ancho=CONFIG_LIMPIEZA['ancho'],
-        alto=CONFIG_LIMPIEZA['alto'],
-        num_suciedad=CONFIG_LIMPIEZA['num_suciedad'],
-        num_obstaculos=0,  # Sin obstáculos en ejercicio 1
-        tipos_suciedad=False  # Sin tipos en ejercicio 1
+        config['ancho_grid'], 
+        config['alto_grid'], 
+        config['num_suciedad']
     )
     
-    # Crear agente con memoria
-    agente = AgenteLimpieza(x=0, y=0, con_memoria=True)
+    agente = AgenteLimpiezaConMemoria(*config['posicion_agente'])
+    estadisticas = EstadisticasLimpieza()
+    visualizador = Visualizador()
     
-    print(f"\nConfiguración:")
-    print(f"  - Grid: {entorno.ancho}x{entorno.alto}")
-    print(f"  - Suciedad inicial: {entorno.get_suciedad_restante()}")
-    print(f"  - Agente: {agente.id}")
+    # Configurar simulación
+    entorno.agregar_agente(agente)
+    estadisticas.iniciar()
     
-    input("\nPresiona Enter para comenzar...")
+    print("Estado inicial del entorno:")
+    visualizador.mostrar_entorno_limpieza(entorno, agente)
     
-    # Simulación
-    for paso in range(PASOS_SIMULACION):
-        agente.update(entorno)
+    # Ejecutar simulación
+    for paso in range(config['max_pasos']):
+        resultado = entorno.ejecutar_paso()
+        estadisticas.registrar_paso(entorno, agente)
         
-        # Mostrar cada 5 pasos
-        if paso % 5 == 0 or entorno.get_suciedad_restante() == 0:
-            limpiar_pantalla()
-            
-            stats = agente.get_estadisticas()
-            mostrar_grid(
-                entorno,
-                [agente],
-                f"EJERCICIO 1 - Paso {paso + 1}/{PASOS_SIMULACION}",
-                {
-                    'Suciedad limpiada': stats['suciedad_limpiada'],
-                    'Suciedad restante': entorno.get_suciedad_restante(),
-                    'Lugares visitados': stats['lugares_visitados'],
-                    'Movimientos': stats['movimientos'],
-                    'Eficiencia': f"{stats['eficiencia']:.2%}"
-                }
-            )
-            time.sleep(0.5)
+        if paso % 5 == 0 or len(entorno.suciedad) == 0:
+            print(f"--- Paso {paso + 1} ---")
+            visualizador.mostrar_entorno_limpieza(entorno, agente)
+            visualizador.mostrar_estadisticas_agente(agente)
         
-        # Terminar si limpió todo
-        if entorno.get_suciedad_restante() == 0:
-            print("\n✅ ¡Toda la suciedad ha sido limpiada!")
+        # Condición de terminación
+        if len(entorno.suciedad) == 0:
+            print("¡ÉXITO! Toda la suciedad ha sido limpiada.")
             break
     
-    # Estadísticas finales
-    print("\n" + "=" * 70)
-    print("ESTADÍSTICAS FINALES")
-    print("=" * 70)
+    # Resultados finales
+    print("\n" + "="*50)
+    print("SIMULACIÓN COMPLETADA")
+    print("="*50)
+    estadisticas.mostrar_resumen(agente)
     
-    stats_finales = agente.get_estadisticas()
-    for clave, valor in stats_finales.items():
-        if isinstance(valor, float):
-            print(f"{clave}: {valor:.2f}")
-        elif isinstance(valor, dict):
-            print(f"{clave}: {valor}")
-        else:
-            print(f"{clave}: {valor}")
-    
-    print("\n" + "=" * 70)
+    # Métricas específicas del ejercicio 1
+    eficiencia_cobertura = (len(agente.lugares_visitados) / 
+                          (config['ancho_grid'] * config['alto_grid']) * 100)
+    print(f"\nMétricas específicas Ejercicio 1:")
+    print(f"Cobertura del entorno: {eficiencia_cobertura:.1f}%")
+    print(f"Lugares visitados únicos: {len(agente.lugares_visitados)}")
+    print(f"Pasos ejecutados: {entorno.tiempo}")
 
 
 if __name__ == "__main__":

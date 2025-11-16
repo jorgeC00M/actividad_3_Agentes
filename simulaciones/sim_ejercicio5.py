@@ -1,104 +1,82 @@
 """
-Simulación Ejercicio 5: Agente con memoria espacial (aprendizaje).
+Simulación Ejercicio 5: Agente que aprende áreas con más comida
 """
 
 import sys
-sys.path.insert(0, '.')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.agentes.agente_recolector import AgenteRecolector
+from src.agentes.agente_recolector import AgenteRecolectorConAprendizaje
 from src.entornos.entorno_recoleccion import EntornoRecoleccion
-from src.utils.visualizacion import mostrar_grid, limpiar_pantalla
-import time
+from src.utils.visualizacion import Visualizador
+from src.utils.estadisticas import EstadisticasRecoleccion
+from src.config.parametros import CONFIG_EJERCICIO_5
 
 
 def simular_ejercicio5():
-    """Ejecuta la simulación del ejercicio 5."""
-    print("\n" + "=" * 70)
-    print("EJERCICIO 5: MEMORIA ESPACIAL Y APRENDIZAJE")
-    print("=" * 70)
-    print("\nCaracterísticas:")
-    print("  ✓ El agente aprende qué áreas tienen más comida")
-    print("  ✓ Mantiene un mapa de calor de recursos")
-    print("  ✓ Prioriza zonas con mayor probabilidad de comida")
+    """Ejecuta la simulación del ejercicio 5"""
+    print("=== EJERCICIO 5: MEMORIA ESPACIAL ===")
+    print("Objetivo: Crear un agente que aprenda qué áreas tienen más comida\n")
     
-    # Crear entorno
-    entorno = EntornoRecoleccion(ancho=15, alto=15, num_comida=25)
-    
-    # Crear agente con aprendizaje
-    agente = AgenteRecolector(
-        x=7, y=7,
-        modo='cooperativo',
-        con_aprendizaje=True  # Activar aprendizaje
+    config = CONFIG_EJERCICIO_5
+    entorno = EntornoRecoleccion(
+        config['ancho_grid'], 
+        config['alto_grid'], 
+        config['num_comida'],
+        config['num_obstaculos']
     )
+    
+    agente = AgenteRecolectorConAprendizaje(*config['posicion_agente'], "Aprendiz")
+    estadisticas = EstadisticasRecoleccion()
+    visualizador = Visualizador()
+    
+    # Configurar simulación
     entorno.agregar_agente(agente)
     
-    print(f"\nConfiguración:")
-    print(f"  - Grid: {entorno.ancho}x{entorno.alto}")
-    print(f"  - Comida inicial: {entorno.get_comida_restante()}")
-    print(f"  - Aprendizaje: Activado")
+    print("Estado inicial del entorno:")
+    visualizador.mostrar_entorno_recoleccion(entorno, [agente])
     
-    input("\nPresiona Enter para comenzar...")
-    
-    # Simulación en fases
-    FASES = 2
-    PASOS_POR_FASE = 30
-    
-    for fase in range(FASES):
-        print(f"\n--- FASE {fase + 1} ---")
+    # Ejecutar simulación
+    for paso in range(config['max_pasos']):
+        resultado = entorno.ejecutar_paso()
+        estadisticas.registrar_paso(entorno, [agente])
         
-        # Resetear entorno pero mantener memoria del agente
-        entorno.reset()
-        agente.x, agente.y = 7, 7
-        agente.comida_recolectada = 0
-        agente.energia = 100
+        if paso % 12 == 0 or len(entorno.comida) == 0 or agente.energia <= 0:
+            print(f"--- Paso {paso + 1} ---")
+            visualizador.mostrar_entorno_recoleccion(entorno, [agente])
+            visualizador.mostrar_estadisticas_agente(agente)
+            print(f"Áreas productivas: {agente.areas_productivas}")
+            print(f"Posiciones en memoria: {len(agente.memoria_comida)}")
         
-        for paso in range(PASOS_POR_FASE):
-            agente.update(entorno)
-            entorno.step()
-            
-            # Mostrar cada 5 pasos
-            if paso % 5 == 0:
-                limpiar_pantalla()
-                
-                stats = agente.get_estadisticas()
-                mostrar_grid(
-                    entorno,
-                    [agente],
-                    f"EJERCICIO 5 - Fase {fase + 1} - Paso {paso + 1}/{PASOS_POR_FASE}",
-                    {
-                        'Comida recolectada': stats['comida_recolectada'],
-                        'Energía': stats['energia'],
-                        'Zonas aprendidas': stats['zonas_aprendidas'],
-                        'Comida restante': entorno.get_comida_restante()
-                    }
-                )
-                
-                time.sleep(0.5)
-            
-            if agente.energia <= 0:
-                print("\n⚠️  Agente sin energía")
-                break
-        
-        print(f"\nFase {fase + 1} completada")
-        print(f"  - Comida recolectada: {agente.comida_recolectada}")
-        print(f"  - Zonas mapeadas: {len(agente.mapa_calor)}")
-        
-        if fase < FASES - 1:
-            input("\nPresiona Enter para la siguiente fase...")
+        # Condiciones de terminación
+        if len(entorno.comida) == 0:
+            print("¡ÉXITO! Toda la comida ha sido recolectada.")
+            break
+        elif agente.energia <= 0:
+            print("¡AGOTADO! El agente se quedó sin energía.")
+            break
     
-    # Mostrar mapa de calor aprendido
-    print("\n" + "=" * 70)
-    print("MAPA DE CALOR APRENDIDO (Top 10 zonas)")
-    print("=" * 70)
+    # Resultados finales
+    print("\n" + "="*50)
+    print("SIMULACIÓN COMPLETADA")
+    print("="*50)
+    estadisticas.mostrar_resumen([agente])
     
-    zonas_ordenadas = sorted(
-        agente.mapa_calor.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )[:10]
+    # Métricas específicas del ejercicio 5
+    print(f"\nMétricas específicas Ejercicio 5:")
+    print(f"Áreas productivas identificadas: {len(agente.areas_productivas)}")
+    print(f"Posiciones memorizadas: {len(agente.memoria_comida)}")
     
-    for pos, valor in zonas_ordenadas:
-        print(f"  Posición {pos}: {valor} puntos")
+    # Calcular precisión de la memoria
+    if agente.memoria_comida:
+        posiciones_con_comida = sum(1 for freq in agente.memoria_comida.values() if freq > 0)
+        precision = posiciones_con_comida / len(agente.memoria_comida) * 100
+        print(f"Precisión de memoria: {precision:.1f}%")
+    
+    # Eficiencia de aprendizaje
+    eficiencia_busqueda = (agente.comida_recolectada / 
+                          min(config['num_comida'], entorno.tiempo) * 100)
+    print(f"Eficiencia de búsqueda: {eficiencia_busqueda:.1f}%")
 
 
 if __name__ == "__main__":

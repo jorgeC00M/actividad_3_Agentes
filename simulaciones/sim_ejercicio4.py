@@ -1,110 +1,101 @@
 """
-Simulación Ejercicio 4: Comunicación entre agentes recolectores.
+Simulación Ejercicio 4: Comunicación entre agentes recolectores
 """
 
 import sys
-sys.path.insert(0, '.')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+import random
 
-from src.agentes.agente_recolector import AgenteRecolector
+from src.agentes.agente_recolector import AgenteRecolectorComunicativo
 from src.entornos.entorno_recoleccion import EntornoRecoleccion
-from src.utils.visualizacion import mostrar_grid, limpiar_pantalla
-from src.config.parametros import CONFIG_RECOLECCION, PASOS_SIMULACION
-import time
+from src.utils.visualizacion import Visualizador
+from src.utils.estadisticas import EstadisticasRecoleccion
+from src.config.parametros import CONFIG_EJERCICIO_4
 
 
 def simular_ejercicio4():
-    """Ejecuta la simulación del ejercicio 4."""
-    print("\n" + "=" * 70)
-    print("EJERCICIO 4: COMUNICACIÓN ENTRE AGENTES")
-    print("=" * 70)
-    print("\nCaracterísticas:")
-    print("  ✓ Múltiples agentes cooperan")
-    print("  ✓ Comparten información sobre objetivos")
-    print("  ✓ Evitan ir al mismo recurso")
+    """Ejecuta la simulación del ejercicio 4"""
+    print("=== EJERCICIO 4: COMUNICACIÓN ENTRE AGENTES ===")
+    print("Objetivo: Implementar comunicación entre agentes para evitar ir al mismo objetivo\n")
     
-    # Crear entorno
+    config = CONFIG_EJERCICIO_4
     entorno = EntornoRecoleccion(
-        ancho=CONFIG_RECOLECCION['ancho'],
-        alto=CONFIG_RECOLECCION['alto'],
-        num_comida=CONFIG_RECOLECCION['num_comida'],
-        competitivo=False
+        config['ancho_grid'], 
+        config['alto_grid'], 
+        config['num_comida'],
+        config['num_obstaculos']
     )
     
-    # Crear agentes cooperativos
+    # Crear múltiples agentes comunicativos
     agentes = []
-    posiciones_inicio = [(0, 0), (14, 0), (0, 14)]
-    
-    for i, (x, y) in enumerate(posiciones_inicio[:CONFIG_RECOLECCION['num_agentes']]):
-        agente = AgenteRecolector(
-            x=x, y=y,
-            modo='cooperativo',
-            con_aprendizaje=False
-        )
+    for i in range(config['num_agentes']):
+        x = random.randint(0, config['ancho_grid'] - 1)
+        y = random.randint(0, config['alto_grid'] - 1)
+        agente = AgenteRecolectorComunicativo(x, y, f"R{i+1}")
         agentes.append(agente)
         entorno.agregar_agente(agente)
     
-    print(f"\nConfiguración:")
-    print(f"  - Grid: {entorno.ancho}x{entorno.alto}")
-    print(f"  - Comida inicial: {entorno.get_comida_restante()}")
-    print(f"  - Agentes: {len(agentes)}")
+    estadisticas = EstadisticasRecoleccion()
+    visualizador = Visualizador()
     
-    input("\nPresiona Enter para comenzar...")
+    print("Leyenda: R1,R2,R3=Agentes, C=Comida, X=Obstáculo")
+    print("Estado inicial del entorno:")
+    visualizador.mostrar_entorno_recoleccion(entorno, agentes)
     
-    # Simulación
-    for paso in range(PASOS_SIMULACION):
-        # Actualizar cada agente
+    # Ejecutar simulación
+    for paso in range(config['max_pasos']):
+        resultado = entorno.ejecutar_paso()
+        estadisticas.registrar_paso(entorno, agentes)
+        
+        # Permitir que los agentes se comuniquen
         for agente in agentes:
-            agente.update(entorno)
-            
-            # Comunicar objetivo a otros
-            if agente.objetivo_actual:
-                agente.enviar_mensaje(
-                    [a for a in agentes if a.id != agente.id],
-                    'objetivo_reclamado',
-                    agente.objetivo_actual
-                )
+            if hasattr(agente, 'enviar_mensaje'):
+                otros_agentes = [a for a in agentes if a.id != agente.id]
+                # Compartir comida encontrada
+                comida_local = agente.percibir(entorno)
+                if comida_local and otros_agentes:
+                    for pos in comida_local[:2]:  # Compartir hasta 2 posiciones
+                        agente.enviar_mensaje(otros_agentes, 'comida_encontrada', pos)
         
-        # Avanzar entorno
-        entorno.step()
+        if paso % 10 == 0 or len(entorno.comida) == 0:
+            print(f"--- Paso {paso + 1} ---")
+            visualizador.mostrar_entorno_recoleccion(entorno, agentes)
+            print(f"Comida restante: {len(entorno.comida)}")
+            print(f"Agentes activos: {len(agentes)}")
+            
+            # Mostrar estadísticas de comunicación
+            total_mensajes = sum(len(agente.mensajes) for agente in agentes 
+                               if hasattr(agente, 'mensajes'))
+            print(f"Mensajes pendientes: {total_mensajes}")
         
-        # Mostrar cada 5 pasos
-        if paso % 5 == 0 or entorno.get_comida_restante() == 0:
-            limpiar_pantalla()
-            
-            stats_totales = {
-                'Comida restante': entorno.get_comida_restante(),
-                'Total recolectado': sum(a.comida_recolectada for a in agentes)
-            }
-            
-            mostrar_grid(
-                entorno,
-                agentes,
-                f"EJERCICIO 4 - Paso {paso + 1}/{PASOS_SIMULACION}",
-                stats_totales
-            )
-            
-            print("Agentes:")
-            for agente in agentes:
-                stats = agente.get_estadisticas()
-                print(f"  {agente.id}: {stats['comida_recolectada']} comida, "
-                      f"energía: {stats['energia']}")
-            
-            time.sleep(0.5)
-        
-        if entorno.get_comida_restante() == 0:
-            print("\n✅ ¡Toda la comida ha sido recolectada!")
+        # Condición de terminación
+        if len(entorno.comida) == 0:
+            print("¡ÉXITO! Toda la comida ha sido recolectada.")
             break
     
-    # Estadísticas finales
-    print("\n" + "=" * 70)
-    print("ESTADÍSTICAS FINALES")
-    print("=" * 70)
+    # Resultados finales
+    print("\n" + "="*50)
+    print("SIMULACIÓN COMPLETADA")
+    print("="*50)
+    estadisticas.mostrar_resumen(agentes)
+    
+    # Métricas específicas del ejercicio 4
+    print(f"\nMétricas específicas Ejercicio 4:")
+    total_mensajes_enviados = 0
+    objetivos_reservados = 0
     
     for agente in agentes:
-        print(f"\n{agente.id}:")
-        stats = agente.get_estadisticas()
-        for clave, valor in stats.items():
-            print(f"  {clave}: {valor}")
+        if hasattr(agente, 'objetivos_reservados'):
+            objetivos_reservados += len(agente.objetivos_reservados)
+        # Contar mensajes procesados (asumiendo que se limpian después de procesar)
+    
+    print(f"Objetivos reservados: {objetivos_reservados}")
+    print(f"Conflicto evitados: {objetivos_reservados}")
+    
+    # Eficiencia de colaboración
+    comida_por_agente = estadisticas.datos['comida_recolectada'][-1] / len(agentes)
+    print(f"Comida promedio por agente: {comida_por_agente:.1f}")
 
 
 if __name__ == "__main__":
