@@ -1,11 +1,11 @@
-"""
-Simulación Ejercicio 2: Diferentes tipos de suciedad con distintos valores
-"""
-
+# simulaciones/sim_ejercicio2.py
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+# CORRECCIÓN: Agregar el directorio padre al path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# CORRECCIÓN: Cambiar las importaciones
 from src.agentes.agente_Limpieza import AgenteLimpiezaConTipos
 from src.entornos.entorno_limpieza import EntornoLimpiezaConTipos
 from src.utils.visualizacion import Visualizador
@@ -66,10 +66,11 @@ def simular_ejercicio2():
         puntos_tipo = cantidad * valor
         print(f"  {tipo}: {cantidad} unidades × {valor}p = {puntos_tipo}p")
     
-    eficiencia_puntos = (agente.puntos_totales / 
-                        (sum(env['valor'] for env in entorno.tipos_suciedad.values()) * 
-                         config['num_suciedad']) * 100)
-    print(f"\nEficiencia en puntos: {eficiencia_puntos:.1f}%")
+    if hasattr(agente, 'puntos_totales') and agente.puntos_totales > 0:
+        eficiencia_puntos = (agente.puntos_totales / 
+                            (sum(env['valor'] for env in entorno.tipos_suciedad.values()) * 
+                             config['num_suciedad']) * 100)
+        print(f"\nEficiencia en puntos: {eficiencia_puntos:.1f}%")
 
 
 if __name__ == "__main__":

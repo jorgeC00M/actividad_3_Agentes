@@ -1,7 +1,4 @@
-"""
-Agentes de limpieza - Ejercicios 1, 2 y 3
-"""
-
+# src/agentes/afente_Limpieza.py
 import random
 from typing import Set, Dict, Any
 from .agente_base import AgenteBase

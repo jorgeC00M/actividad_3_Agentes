@@ -1,7 +1,4 @@
-"""
-Utilidades para recolección de estadísticas y métricas
-"""
-
+# src/utils/estadisticas.py
 from typing import Dict, Any, List
 import time
 

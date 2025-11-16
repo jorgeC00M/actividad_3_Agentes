@@ -1,7 +1,4 @@
-"""
-Entornos de limpieza - Para ejercicios 1, 2 y 3
-"""
-
+# src/entornos/entorno_limpieza.py
 import random
 from typing import Set, Dict, Any, Tuple, Optional
 from .entorno_base import EntornoBase

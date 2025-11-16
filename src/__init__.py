@@ -1,7 +1,4 @@
-"""
-Paquete de simulación basada en agentes - Actividad 3
-"""
-
+# src/utils/__init__.py
 __version__ = "1.0.0"
 __author__ = "Tu Nombre"
 

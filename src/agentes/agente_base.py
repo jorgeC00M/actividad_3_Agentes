@@ -1,7 +1,4 @@
-"""
-Clase base abstracta para todos los agentes
-"""
-
+# src/agentes/afente_base.py
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple
 import random

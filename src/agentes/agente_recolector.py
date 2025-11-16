@@ -1,7 +1,4 @@
-"""
-Agentes recolectores - Ejercicios 4, 5 y 6
-"""
-
+# src/agentes/afente_recolector.py
 import random
 from typing import List, Dict, Any, Set
 from collections import deque

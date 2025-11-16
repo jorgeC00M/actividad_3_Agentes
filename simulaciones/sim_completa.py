@@ -1,12 +1,9 @@
-"""
-Simulación completa que integra todos los ejercicios
-"""
-
+# simulaciones/sim_completa.py
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.agentes.agente_limpieza import (
+from src.agentes.agente_Limpieza import (
     AgenteLimpiezaConMemoria, 
     AgenteLimpiezaConTipos, 
     AgenteLimpiezaConEvasion

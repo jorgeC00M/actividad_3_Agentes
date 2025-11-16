@@ -1,7 +1,4 @@
-"""
-Simulación Ejercicio 5: Agente que aprende áreas con más comida
-"""
-
+# simulaciones/sim_ejercicio5.py
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))

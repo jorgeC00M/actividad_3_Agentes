@@ -1,7 +1,4 @@
-"""
-Simulación Ejercicio 4: Comunicación entre agentes recolectores
-"""
-
+# simulaciones/sim_ejercicio4.py
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))

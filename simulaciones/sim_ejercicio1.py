@@ -1,12 +1,5 @@
-"""
-Simulación Ejercicio 1: Agente limpiador con memoria de lugares visitados
-"""
-
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-
-from src.agentes.agente_limpieza import AgenteLimpiezaConMemoria
+# simulaciones/sim_ejercicio1.py
+from src.agentes.agente_Limpieza import AgenteLimpiezaConMemoria
 from src.entornos.entorno_limpieza import EntornoLimpieza
 from src.utils.visualizacion import Visualizador
 from src.utils.estadisticas import EstadisticasLimpieza

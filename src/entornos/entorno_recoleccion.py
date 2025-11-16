@@ -1,7 +1,4 @@
-"""
-Entornos de recolección - Para ejercicios 4, 5 y 6
-"""
-
+# src/entornos/entorno_recoleccion.py
 import random
 from typing import Set, Dict, Any, List, Tuple
 from .entorno_base import EntornoBase

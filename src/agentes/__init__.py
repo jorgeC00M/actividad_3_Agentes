@@ -1,9 +1,6 @@
-"""
-Módulo de agentes - Implementaciones de diferentes tipos de agentes
-"""
-
+# src/agentes/__init__.py
 from .agente_base import AgenteBase
-from .agente_limpieza import (
+from .agente_Limpieza import (
     AgenteLimpiezaBase,
     AgenteLimpiezaConMemoria,
     AgenteLimpiezaConTipos,

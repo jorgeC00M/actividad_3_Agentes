@@ -1,6 +1,4 @@
-"""
-Parámetros de configuración para las simulaciones
-"""
+# src/config/parametros.py
 
 # Configuración Ejercicio 1: Agente con memoria
 CONFIG_EJERCICIO_1 = {

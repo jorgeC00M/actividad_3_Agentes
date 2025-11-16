@@ -1,7 +1,4 @@
-"""
-Simulación Ejercicio 3: Agente que evita obstáculos fijos
-"""
-
+# simulaciones/sim_ejercicio3.py
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))

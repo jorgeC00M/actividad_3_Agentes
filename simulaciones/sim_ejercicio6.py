@@ -1,7 +1,4 @@
-"""
-Simulación Ejercicio 6: Sistema donde agentes compiten por recursos limitados
-"""
-
+# simulaciones/sim_ejercicio6.py
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))

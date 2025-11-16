@@ -1,3 +1,4 @@
+# src/config/__init__.py
 from .parametros import *
 
 __all__ = [

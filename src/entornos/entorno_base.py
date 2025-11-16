@@ -1,7 +1,4 @@
-"""
-Clase base para todos los entornos
-"""
-
+# src/entornos/entorno_base.py
 from abc import ABC, abstractmethod
 from typing import List, Set, Dict, Any, Tuple
 

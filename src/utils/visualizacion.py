@@ -1,7 +1,4 @@
-"""
-Utilidades de visualización para los entornos
-"""
-
+# src/utils/visualizacion.py
 from typing import List
 import sys
 

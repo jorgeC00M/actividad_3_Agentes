@@ -1,7 +1,4 @@
-"""
-Algoritmos de búsqueda de caminos
-"""
-
+# src/utils/pathfinding.py
 from typing import List, Tuple, Optional, Dict, Any
 from collections import deque
 import math

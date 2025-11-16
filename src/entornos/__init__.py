@@ -1,3 +1,4 @@
+# src/entornos/__init__.py
 from .entorno_base import EntornoBase
 from .entorno_limpieza import EntornoLimpieza, EntornoLimpiezaConTipos, EntornoLimpiezaConObstaculos
 from .entorno_recoleccion import EntornoRecoleccion, EntornoRecoleccionCompetitivo
