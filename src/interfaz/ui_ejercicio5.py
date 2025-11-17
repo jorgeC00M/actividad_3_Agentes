@@ -1,5 +1,6 @@
 # src/interfaz/ui_ejercicio5.py
 import tkinter as tk
+import tkinter.simpledialog as sd
 import random
 
 from src.entornos.entorno_recoleccion import EntornoRecoleccion
@@ -41,6 +42,17 @@ class Ejercicio5GUI(RecoleccionGUI):
     def __init__(self, root: tk.Tk):
         config = CONFIG_EJERCICIO_5
 
+        # Preguntar al usuario por GUI la cantidad de pasos
+        max_pasos = sd.askinteger(
+            "Configuración Ejercicio 5",
+            f"Máximo de pasos para el agente (por defecto {config['max_pasos']}):",
+            minvalue=1,
+            maxvalue=500,
+            parent=root,
+        )
+        if max_pasos is None:
+            max_pasos = config["max_pasos"]
+
         entorno = EntornoRecoleccion(
             config["ancho_grid"],
             config["alto_grid"],
@@ -55,9 +67,10 @@ class Ejercicio5GUI(RecoleccionGUI):
         agentes = [agente]
 
         super().__init__(root, entorno, agentes, "Ejercicio 5 - Memoria espacial")
-        self.max_pasos = config["max_pasos"]
+        self.max_pasos = max_pasos
         self.agente = agente
-        self._log(f"Configuración: {config}")
+        self._log(f"Configuración base: {config}")
+        self._log(f"Máximo de pasos asignado por el usuario: {max_pasos}")
         self._log(
             "Nota: en ejecuciones sucesivas, el agente reutiliza memoria de áreas productivas (archivo JSON)."
         )

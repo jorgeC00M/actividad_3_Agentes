@@ -1,5 +1,6 @@
 # src/interfaz/ui_ejercicio4.py
 import tkinter as tk
+import tkinter.simpledialog as sd
 import random
 
 from src.entornos.entorno_recoleccion import EntornoRecoleccion
@@ -12,23 +13,35 @@ class Ejercicio4GUI(RecoleccionGUI):
     def __init__(self, root: tk.Tk):
         config = CONFIG_EJERCICIO_4
 
-        print("Configuración Ejercicio 4 (dejar vacío usa por defecto):")
-        try:
-            num_agentes = int(
-                input(f"Nº de agentes [{config['num_agentes']}]: ")
-                or config["num_agentes"]
-            )
-            num_comida = int(
-                input(f"Nº de comida [{config['num_comida']}]: ")
-                or config["num_comida"]
-            )
-            num_obst = int(
-                input(f"Nº de obstáculos [{config['num_obstaculos']}]: ")
-                or config["num_obstaculos"]
-            )
-        except ValueError:
+        # Pedir configuración mediante cuadros de diálogo de Tkinter
+        num_agentes = sd.askinteger(
+            "Configuración Ejercicio 4",
+            f"Nº de agentes (por defecto {config['num_agentes']}):",
+            minvalue=1,
+            maxvalue=50,
+            parent=root,
+        )
+        if num_agentes is None:
             num_agentes = config["num_agentes"]
+
+        num_comida = sd.askinteger(
+            "Configuración Ejercicio 4",
+            f"Nº de comida (por defecto {config['num_comida']}):",
+            minvalue=1,
+            maxvalue=500,
+            parent=root,
+        )
+        if num_comida is None:
             num_comida = config["num_comida"]
+
+        num_obst = sd.askinteger(
+            "Configuración Ejercicio 4",
+            f"Nº de obstáculos (por defecto {config['num_obstaculos']}):",
+            minvalue=0,
+            maxvalue=500,
+            parent=root,
+        )
+        if num_obst is None:
             num_obst = config["num_obstaculos"]
 
         entorno = EntornoRecoleccion(
@@ -50,10 +63,12 @@ class Ejercicio4GUI(RecoleccionGUI):
         )
 
     def realizar_paso(self) -> bool:
+        # Comunicación entre agentes antes de mover
         for agente in self.agentes:
             comida_local = agente.percibir(self.entorno)
             otros = [a for a in self.agentes if a.id != agente.id]
             if comida_local and otros:
+                # Compartir hasta 2 posiciones de comida
                 for pos in comida_local[:2]:
                     agente.enviar_mensaje(otros, "comida_encontrada", pos)
                     agente.enviar_mensaje(otros, "objetivo_reservado", pos)

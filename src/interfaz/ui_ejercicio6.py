@@ -1,5 +1,6 @@
 # src/interfaz/ui_ejercicio6.py
 import tkinter as tk
+import tkinter.simpledialog as sd
 import random
 
 from src.entornos.entorno_recoleccion import EntornoRecoleccionCompetitivo
@@ -12,18 +13,25 @@ class Ejercicio6GUI(RecoleccionGUI):
     def __init__(self, root: tk.Tk):
         base = CONFIG_EJERCICIO_6
 
-        print("Configuración Ejercicio 6 (dejar vacío usa por defecto):")
-        try:
-            num_agentes = int(
-                input(f"Nº de agentes [{base['num_agentes']}]: ")
-                or base["num_agentes"]
-            )
-            num_comida = int(
-                input(f"Nº de comida [{base['num_comida']}]: ")
-                or base["num_comida"]
-            )
-        except ValueError:
+        # Pedir configuración mediante diálogos de Tkinter
+        num_agentes = sd.askinteger(
+            "Configuración Ejercicio 6",
+            f"Nº de agentes (por defecto {base['num_agentes']}):",
+            minvalue=1,
+            maxvalue=50,
+            parent=root,
+        )
+        if num_agentes is None:
             num_agentes = base["num_agentes"]
+
+        num_comida = sd.askinteger(
+            "Configuración Ejercicio 6",
+            f"Nº de comida (por defecto {base['num_comida']}):",
+            minvalue=1,
+            maxvalue=500,
+            parent=root,
+        )
+        if num_comida is None:
             num_comida = base["num_comida"]
 
         entorno = EntornoRecoleccionCompetitivo(
