@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # CORRECCIÓN: Cambiar las importaciones
-from src.agentes.agente_Limpieza import AgenteLimpiezaConTipos
+from src.agentes.agente_limpieza import AgenteLimpiezaConTipos
 from src.entornos.entorno_limpieza import EntornoLimpiezaConTipos
 from src.utils.visualizacion import Visualizador
 from src.utils.estadisticas import EstadisticasLimpieza

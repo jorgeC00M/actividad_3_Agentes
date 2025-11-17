@@ -1,26 +1,26 @@
 # src/agentes/__init__.py
 from .agente_base import AgenteBase
-from .agente_Limpieza import (
+from .agente_limpieza import (
     AgenteLimpiezaBase,
     AgenteLimpiezaConMemoria,
     AgenteLimpiezaConTipos,
-    AgenteLimpiezaConEvasion
+    AgenteLimpiezaConEvasion,
 )
 from .agente_recolector import (
     AgenteRecolectorBase,
     AgenteRecolectorComunicativo,
     AgenteRecolectorConAprendizaje,
-    AgenteCompetitivo
+    AgenteCompetitivo,
 )
 
 __all__ = [
-    'AgenteBase',
-    'AgenteLimpiezaBase',
-    'AgenteLimpiezaConMemoria',
-    'AgenteLimpiezaConTipos',
-    'AgenteLimpiezaConEvasion',
-    'AgenteRecolectorBase',
-    'AgenteRecolectorComunicativo',
-    'AgenteRecolectorConAprendizaje',
-    'AgenteCompetitivo'
+    "AgenteBase",
+    "AgenteLimpiezaBase",
+    "AgenteLimpiezaConMemoria",
+    "AgenteLimpiezaConTipos",
+    "AgenteLimpiezaConEvasion",
+    "AgenteRecolectorBase",
+    "AgenteRecolectorComunicativo",
+    "AgenteRecolectorConAprendizaje",
+    "AgenteCompetitivo",
 ]

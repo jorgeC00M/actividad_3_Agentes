@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.agentes.agente_Limpieza import AgenteLimpiezaConEvasion
+from src.agentes.agente_limpieza import AgenteLimpiezaConEvasion
 from src.entornos.entorno_limpieza import EntornoLimpiezaConObstaculos
 from src.utils.visualizacion import Visualizador
 from src.utils.estadisticas import EstadisticasLimpieza
