@@ -14,6 +14,7 @@ class AgenteRecolectorBase(AgenteBase):
         self.comida_recolectada = 0
         self.plan: List[str] = []
         self._entorno = None  # Referencia al entorno para planificar_ruta
+        self.objetivo_actual: Optional[Tuple[int, int]] = None
 
     def percibir(self, entorno):
         """Guarda el entorno y percibe comida cercana."""
@@ -63,12 +64,17 @@ class AgenteRecolectorBase(AgenteBase):
                 objetivo = min(
                     percepcion, key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y)
                 )
+                self.objetivo_actual = objetivo
                 self.plan = self.planificar_ruta(objetivo)
 
             if self.plan:
                 return self.plan.pop(0)
+
+            # Sin plan ni comida visible: moverse al azar
+            self.objetivo_actual = None
             return random.choice(["arriba", "abajo", "izquierda", "derecha"])
 
+        # Si ya tenía un plan, seguirlo
         return self.plan.pop(0)
 
     def actuar(self, decision: str, entorno) -> None:
@@ -80,7 +86,9 @@ class AgenteRecolectorBase(AgenteBase):
                 if entorno.recolectar_comida(self.x, self.y):
                     self.comida_recolectada += 1
                     self.energia += 10
-                    self.plan = []  # Limpiar plan actual si alcanzó el objetivo
+                    # Al alcanzar comida, limpiamos el plan y el objetivo
+                    self.plan = []
+                    self.objetivo_actual = None
 
 
 class AgenteRecolectorComunicativo(AgenteRecolectorBase):
@@ -127,14 +135,19 @@ class AgenteRecolectorComunicativo(AgenteRecolectorBase):
                     opciones_disponibles,
                     key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y),
                 )
+                self.objetivo_actual = objetivo
                 self.plan = self.planificar_ruta(objetivo)
                 # Reservar objetivo
                 self.objetivos_reservados.add(objetivo)
 
             if self.plan:
                 return self.plan.pop(0)
+
+            # Sin plan: movimiento aleatorio
+            self.objetivo_actual = None
             return random.choice(["arriba", "abajo", "izquierda", "derecha"])
 
+        # Ya tiene plan: seguirlo
         return self.plan.pop(0)
 
 
@@ -199,10 +212,14 @@ class AgenteRecolectorConAprendizaje(AgenteRecolectorBase):
                     opciones_priorizadas,
                     key=lambda c: abs(c[0] - self.x) + abs(c[1] - self.y),
                 )
+                self.objetivo_actual = objetivo
                 self.plan = self.planificar_ruta(objetivo)
 
             if self.plan:
                 return self.plan.pop(0)
+
+            # Sin plan ni áreas productivas: movimiento aleatorio
+            self.objetivo_actual = None
             return random.choice(["arriba", "abajo", "izquierda", "derecha"])
 
         return self.plan.pop(0)
@@ -222,22 +239,38 @@ class AgenteCompetitivo(AgenteRecolectorComunicativo):
         self.estrategia = estrategia  # 'agresiva', 'conservadora', 'evasiva'
         self.conflictos_ganados = 0
         self.conflictos_perdidos = 0
+        self.rivales_actuales: List[AgenteBase] = []
 
-    def detectar_rivales_cercanos(self, otros_agentes, radio: int = 2):
-        rivales = []
-        for agente in otros_agentes:
-            if agente.id != self.id:
+    def percibir(self, entorno):
+        """Percibe comida y rivales cercanos."""
+        # Primero, percepción normal de comida (guarda _entorno)
+        percepcion_comida = super().percibir(entorno)
+
+        # Detectar rivales cercanos
+        self.rivales_actuales = []
+        for agente in entorno.agentes:
+            if agente is not self:
                 distancia = abs(agente.x - self.x) + abs(agente.y - self.y)
-                if distancia <= radio:
-                    rivales.append(agente)
-        return rivales
+                if distancia <= 2:
+                    self.rivales_actuales.append(agente)
 
-    def evaluar_competencia(self, objetivo, otros_agentes) -> bool:
+        return percepcion_comida
+
+    def detectar_rivales_cercanos(self) -> List[AgenteBase]:
+        """Devuelve la lista de rivales detectados en la última percepción."""
+        return self.rivales_actuales
+
+    def evaluar_competencia(
+        self, objetivo: Optional[Tuple[int, int]]
+    ) -> bool:
         """
         Devuelve True si el agente decide competir por el objetivo,
-        según su estrategia.
+        según su estrategia y los rivales cercanos.
         """
-        rivales = self.detectar_rivales_cercanos(otros_agentes)
+        rivales = self.detectar_rivales_cercanos()
+
+        if objetivo is None:
+            return True  # Nada que evaluar
 
         if self.estrategia == "agresiva":
             return True  # Siempre competir
@@ -246,6 +279,28 @@ class AgenteCompetitivo(AgenteRecolectorComunicativo):
         # 'evasiva'
         return len(rivales) == 0  # Competir solo si no hay rivales
 
-    # Nota: decidir() podría sobreescribirse para usar evaluar_competencia,
-    # pero lo dejamos llamando a super().decidir(percepcion) para no romper
-    # el flujo de las simulaciones actuales.
+    def decidir(self, percepcion) -> str:
+        """
+        Usa la lógica comunicativa base, pero puede abandonar el objetivo
+        si la evaluación competitiva lo desaconseja.
+        """
+        # Decisión propuesta por la lógica colaborativa/comunicativa
+        decision = super().decidir(percepcion)
+
+        # Si tenemos un objetivo y un plan pendiente, evaluamos si vale la pena competir
+        if self.objetivo_actual is not None and self.plan:
+            quiere_competir = self.evaluar_competencia(self.objetivo_actual)
+
+            if not quiere_competir:
+                # Renuncia al objetivo: cuenta como conflicto perdido potencial
+                self.conflictos_perdidos += 1
+                self.plan = []
+                self.objetivo_actual = None
+                # Elegir un movimiento aleatorio en lugar de seguir el plan
+                return random.choice(["arriba", "abajo", "izquierda", "derecha"])
+            else:
+                # Acepta competir; si hay rivales cerca, lo contamos como conflicto
+                if self.rivales_actuales:
+                    self.conflictos_ganados += 1
+
+        return decision

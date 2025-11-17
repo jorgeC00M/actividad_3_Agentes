@@ -14,7 +14,7 @@ class EntornoRecoleccion(EntornoBase):
         super().__init__(ancho, alto)
         self.comida: Dict[Tuple[int, int], int] = {}
         self.obstaculos: Set[Tuple[int, int]] = set()
-        # Primero obstáculos, luego comida para evitar superposición
+        # 🔁 Primero obstáculos, luego comida para evitar superposición
         self._generar_obstaculos(num_obstaculos)
         self._generar_comida(num_comida)
 
@@ -23,7 +23,6 @@ class EntornoRecoleccion(EntornoBase):
         for _ in range(cantidad):
             x = random.randint(0, self.ancho - 1)
             y = random.randint(0, self.alto - 1)
-            # Evitar duplicados; no pasa nada si pisa comida porque aún no se ha generado
             self.obstaculos.add((x, y))
 
     def _generar_comida(self, cantidad: int):
