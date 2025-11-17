@@ -1,11 +1,4 @@
 # simulaciones/sim_ejercicio2.py
-import sys
-import os
-
-# CORRECCIÓN: Agregar el directorio padre al path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# CORRECCIÓN: Cambiar las importaciones
 from src.agentes.agente_limpieza import AgenteLimpiezaConTipos
 from src.entornos.entorno_limpieza import EntornoLimpiezaConTipos
 from src.utils.visualizacion import Visualizador
@@ -14,63 +7,74 @@ from src.config.parametros import CONFIG_EJERCICIO_2
 
 
 def simular_ejercicio2():
-    """Ejecuta la simulación del ejercicio 2"""
+    """Ejecuta la simulación del ejercicio 2."""
     print("=== EJERCICIO 2: TIPOS DE SUCIEDAD CON VALORES ===")
-    print("Objetivo: Agregar diferentes tipos de suciedad con distintos valores\n")
-    
+    print("Objetivo: Agregar diferentes tipos de suciedad con distintos valores.\n")
+
     config = CONFIG_EJERCICIO_2
+
+    # Opción: permitir al usuario cambiar valores
+    print("Valores por defecto: polvo=1, mancha=2, barro=3.")
+    resp = input("¿Desea cambiar los valores? (s/n) [n]: ").strip().lower() or "n"
+
+    tipos = None
+    if resp == "s":
+        try:
+            v_polvo = int(input("Valor para POLVO [1]: ") or 1)
+            v_mancha = int(input("Valor para MANCHA [2]: ") or 2)
+            v_barro = int(input("Valor para BARRO [3]: ") or 3)
+            tipos = {
+                "polvo": {"valor": v_polvo, "simbolo": "P"},
+                "mancha": {"valor": v_mancha, "simbolo": "M"},
+                "barro": {"valor": v_barro, "simbolo": "B"},
+            }
+        except ValueError:
+            print("Valores inválidos, usando configuración por defecto.")
+
     entorno = EntornoLimpiezaConTipos(
-        config['ancho_grid'], 
-        config['alto_grid'], 
-        config['num_suciedad']
+        config["ancho_grid"], config["alto_grid"], config["num_suciedad"], tipos
     )
-    
-    agente = AgenteLimpiezaConTipos(*config['posicion_agente'])
+
+    agente = AgenteLimpiezaConTipos(*config["posicion_agente"])
     estadisticas = EstadisticasLimpieza()
     visualizador = Visualizador()
-    
-    # Configurar simulación
+
     entorno.agregar_agente(agente)
     estadisticas.iniciar()
-    
-    print("Leyenda: P=Polvo(1p), M=Mancha(2p), B=Barro(3p)")
+
+    print("Leyenda: P=Polvo, M=Mancha, B=Barro")
     print("Estado inicial del entorno:")
     visualizador.mostrar_entorno_limpieza(entorno, agente)
-    
-    # Ejecutar simulación
-    for paso in range(config['max_pasos']):
-        resultado = entorno.ejecutar_paso()
+
+    for paso in range(config["max_pasos"]):
+        entorno.ejecutar_paso()
         estadisticas.registrar_paso(entorno, agente)
-        
+
         if paso % 5 == 0 or len(entorno.suciedad) == 0:
             print(f"--- Paso {paso + 1} ---")
             visualizador.mostrar_entorno_limpieza(entorno, agente)
             visualizador.mostrar_estadisticas_agente(agente)
-        
-        # Condición de terminación
+
         if len(entorno.suciedad) == 0:
             print("¡ÉXITO! Toda la suciedad ha sido limpiada.")
             break
-    
-    # Resultados finales
-    print("\n" + "="*50)
+
+    print("\n" + "=" * 50)
     print("SIMULACIÓN COMPLETADA")
-    print("="*50)
+    print("=" * 50)
     estadisticas.mostrar_resumen(agente)
-    
-    # Métricas específicas del ejercicio 2
-    print(f"\nMétricas específicas Ejercicio 2:")
-    print(f"Puntos por tipo de suciedad:")
+
+    print("\nMétricas específicas Ejercicio 2:")
+    print("Puntos por tipo de suciedad:")
     for tipo, cantidad in agente.tipos_limpiados.items():
-        valor = entorno.tipos_suciedad[tipo]['valor']
+        valor = entorno.tipos_suciedad[tipo]["valor"]
         puntos_tipo = cantidad * valor
         print(f"  {tipo}: {cantidad} unidades × {valor}p = {puntos_tipo}p")
-    
-    if hasattr(agente, 'puntos_totales') and agente.puntos_totales > 0:
-        eficiencia_puntos = (agente.puntos_totales / 
-                            (sum(env['valor'] for env in entorno.tipos_suciedad.values()) * 
-                             config['num_suciedad']) * 100)
-        print(f"\nEficiencia en puntos: {eficiencia_puntos:.1f}%")
+
+    try:
+        estadisticas.graficar("Ejercicio 2 - Tipos de suciedad")
+    except Exception as e:
+        print(f"No se pudo graficar: {e}")
 
 
 if __name__ == "__main__":

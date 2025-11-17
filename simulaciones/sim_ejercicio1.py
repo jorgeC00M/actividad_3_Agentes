@@ -9,13 +9,11 @@ from src.config.parametros import CONFIG_EJERCICIO_1
 def simular_ejercicio1():
     """Ejecuta la simulación del ejercicio 1."""
     print("=== EJERCICIO 1: AGENTE LIMPIADOR CON MEMORIA ===")
-    print("Objetivo: Implementar un agente que recuerde lugares ya visitados\n")
+    print("Objetivo: Agente que recuerda lugares ya visitados y no repite celdas\n")
 
     config = CONFIG_EJERCICIO_1
     entorno = EntornoLimpieza(
-        config["ancho_grid"],
-        config["alto_grid"],
-        config["num_suciedad"],
+        config["ancho_grid"], config["alto_grid"], config["num_suciedad"]
     )
 
     agente = AgenteLimpiezaConMemoria(*config["posicion_agente"])
@@ -55,6 +53,16 @@ def simular_ejercicio1():
     print(f"Cobertura del entorno: {eficiencia_cobertura:.1f}%")
     print(f"Lugares visitados únicos: {len(agente.lugares_visitados)}")
     print(f"Pasos ejecutados: {entorno.tiempo}")
+
+    print("\nCamino recorrido (x, y, acción):")
+    for paso in agente.historial_movimientos:
+        print(f"({paso['x']},{paso['y']}) -> {paso['accion']}")
+
+    # Gráfica opcional
+    try:
+        estadisticas.graficar("Ejercicio 1 - Limpieza con memoria")
+    except Exception as e:
+        print(f"No se pudo graficar: {e}")
 
 
 if __name__ == "__main__":

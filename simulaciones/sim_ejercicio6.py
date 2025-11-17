@@ -1,7 +1,4 @@
 # simulaciones/sim_ejercicio6.py
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 import random
 
 from src.agentes.agente_recolector import AgenteCompetitivo
@@ -12,106 +9,118 @@ from src.config.parametros import CONFIG_EJERCICIO_6
 
 
 def simular_ejercicio6():
-    """Ejecuta la simulación del ejercicio 6"""
+    """Ejecuta la simulación del ejercicio 6."""
     print("=== EJERCICIO 6: COMPETENCIA POR RECURSOS ===")
-    print("Objetivo: Desarrollar un sistema donde agentes compitan por recursos limitados\n")
-    
-    config = CONFIG_EJERCICIO_6
+    print("Objetivo: Sistema donde agentes compiten por recursos limitados.\n")
+
+    base = CONFIG_EJERCICIO_6
+    try:
+        num_agentes = int(
+            input(f"Nº de agentes en competencia [{base['num_agentes']}]: ")
+            or base["num_agentes"]
+        )
+        num_comida = int(
+            input(f"Nº de recursos de comida [{base['num_comida']}]: ")
+            or base["num_comida"]
+        )
+    except ValueError:
+        num_agentes = base["num_agentes"]
+        num_comida = base["num_comida"]
+
     entorno = EntornoRecoleccionCompetitivo(
-        config['ancho_grid'], 
-        config['alto_grid'], 
-        config['num_comida'],
-        config['num_obstaculos']
+        base["ancho_grid"],
+        base["alto_grid"],
+        num_comida,
+        base["num_obstaculos"],
     )
-    
-    # Crear agentes con diferentes estrategias
+
     agentes = []
-    for i in range(config['num_agentes']):
-        x = random.randint(0, config['ancho_grid'] - 1)
-        y = random.randint(0, config['alto_grid'] - 1)
-        estrategia = config['estrategias'][i] if i < len(config['estrategias']) else 'agresiva'
+    estrategias = base["estrategias"]
+    for i in range(num_agentes):
+        x = random.randint(0, base["ancho_grid"] - 1)
+        y = random.randint(0, base["alto_grid"] - 1)
+        estrategia = (
+            estrategias[i] if i < len(estrategias) else "agresiva"
+        )
         agente = AgenteCompetitivo(x, y, f"{estrategia[0].upper()}{i+1}", estrategia)
         agentes.append(agente)
         entorno.agregar_agente(agente)
-    
+
     estadisticas = EstadisticasRecoleccion()
     visualizador = Visualizador()
-    
-    print("Leyenda: A1,G2=Agentes (A=Agresivo, C=Conservador, E=Evasivo), C=Comida, X=Obstáculo")
+
+    print(
+        "Leyenda: A1,G2=Agentes (A=Agresivo, C=Conservador, E=Evasivo), C=Comida, X=Obstáculo"
+    )
     print("Estado inicial del entorno:")
     visualizador.mostrar_entorno_recoleccion(entorno, agentes)
-    
-    # Ejecutar simulación
-    for paso in range(config['max_pasos']):
-        resultado = entorno.ejecutar_paso()
+
+    for paso in range(base["max_pasos"]):
+        entro_result = entorno.ejecutar_paso()
         estadisticas.registrar_paso(entorno, agentes)
-        
-        # Comunicación entre agentes competitivos
-        for agente in agentes:
-            if hasattr(agente, 'enviar_mensaje'):
-                otros_agentes = [a for a in agentes if a.id != agente.id]
-                comida_local = agente.percibir(entorno)
-                if comida_local and otros_agentes:
-                    for pos in comida_local[:1]:  # Compartir menos información
-                        agente.enviar_mensaje(otros_agentes, 'comida_encontrada', pos)
-                        agente.enviar_mensaje(otros_agentes, 'objetivo_reservado', pos)
-        
-        if paso % 15 == 0 or len(entorno.comida) == 0 or len(agentes) == 0:
+
+        if (
+            paso % 10 == 0
+            or len(entorno.comida) == 0
+            or len(agentes) == 0
+        ):
             print(f"--- Paso {paso + 1} ---")
             visualizador.mostrar_entorno_recoleccion(entorno, agentes)
             print(f"Comida restante: {len(entorno.comida)}")
             print(f"Agentes activos: {len(agentes)}")
-            
-            # Mostrar estado de competencia
-            for agente in agentes:
-                conflictos = (getattr(agente, 'conflictos_ganados', 0) + 
-                            getattr(agente, 'conflictos_perdidos', 0))
-                print(f"{agente.id}: {agente.comida_recolectada} comida, {conflictos} conflictos")
-        
-        # Condiciones de terminación
-        if len(entorno.comida) == 0 and paso > 10:
+
+            for a in agentes:
+                conflictos = (
+                    a.conflictos_ganados + a.conflictos_perdidos
+                )
+                print(
+                    f"{a.id} ({a.estrategia}): comida={a.comida_recolectada}, conflictos={conflictos}"
+                )
+
+        if len(entorno.comida) == 0 and paso > 5:
             print("¡RECURSOS AGOTADOS! No queda comida en el entorno.")
             break
-        elif len(agentes) == 0:
+        if len(agentes) == 0:
             print("¡TODOS ELIMINADOS! Ningún agente sobrevivió.")
             break
-    
-    # Resultados finales
-    print("\n" + "="*50)
+
+    print("\n" + "=" * 50)
     print("COMPETENCIA FINALIZADA")
-    print("="*50)
+    print("=" * 50)
     estadisticas.mostrar_resumen(agentes)
-    
-    # Métricas específicas del ejercicio 6
-    print(f"\nMétricas específicas Ejercicio 6:")
-    
-    # Análisis por estrategia
-    estrategias = {}
-    for agente in agentes:
-        if hasattr(agente, 'estrategia'):
-            estrategia = agente.estrategia
-            if estrategia not in estrategias:
-                estrategias[estrategia] = []
-            estrategias[estrategia].append(agente)
-    
-    for estrategia, agents in estrategias.items():
-        comida_total = sum(a.comida_recolectada for a in agents)
-        conflictos_total = sum(getattr(a, 'conflictos_ganados', 0) + 
-                             getattr(a, 'conflictos_perdidos', 0) for a in agents)
+
+    print("\nMétricas específicas Ejercicio 6:")
+    estrategias_dict = {}
+    for a in agentes:
+        estrategias_dict.setdefault(a.estrategia, []).append(a)
+
+    for estrategia, group in estrategias_dict.items():
+        comida_total = sum(a.comida_recolectada for a in group)
+        conflictos_total = sum(
+            a.conflictos_ganados + a.conflictos_perdidos for a in group
+        )
         print(f"\nEstrategia {estrategia.upper()}:")
-        print(f"  Agentes: {len(agents)}")
+        print(f"  Agentes: {len(group)}")
         print(f"  Comida total: {comida_total}")
         print(f"  Conflictos totales: {conflictos_total}")
         if conflictos_total > 0:
-            ratio_ganados = sum(getattr(a, 'conflictos_ganados', 0) for a in agents) / conflictos_total * 100
+            ratio_ganados = (
+                sum(a.conflictos_ganados for a in group)
+                / conflictos_total
+                * 100
+            )
             print(f"  Ratio de conflictos ganados: {ratio_ganados:.1f}%")
-    
-    # Ganador de la competencia
+
     if agentes:
         ganador = max(agentes, key=lambda a: a.comida_recolectada)
-        print(f"\n🏆 GANADOR: {ganador.id} con {ganador.comida_recolectada} comida")
-        if hasattr(ganador, 'estrategia'):
-            print(f"   Estrategia: {ganador.estrategia}")
+        print(
+            f"\n🏆 GANADOR: {ganador.id} con {ganador.comida_recolectada} unidades de comida"
+        )
+
+    try:
+        estadisticas.graficar("Ejercicio 6 - Competencia por recursos")
+    except Exception as e:
+        print(f"No se pudo graficar: {e}")
 
 
 if __name__ == "__main__":

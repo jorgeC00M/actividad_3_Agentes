@@ -1,7 +1,10 @@
 # src/agentes/agente_recolector.py
+import os
 import random
 from typing import List, Dict, Any, Set, Tuple, Optional
 from collections import deque
+
+import numpy as np
 
 from .agente_base import AgenteBase
 
@@ -56,8 +59,8 @@ class AgenteRecolectorBase(AgenteBase):
     def decidir(self, percepcion) -> str:
         """
         Si no tiene plan:
-        - elige la comida más cercana y planifica ruta
-        - si no hay comida visible, se mueve aleatoriamente.
+         - elige la comida más cercana y planifica ruta
+         - si no hay comida visible, se mueve aleatoriamente.
         """
         if not self.plan:
             if percepcion:
@@ -98,8 +101,10 @@ class AgenteRecolectorComunicativo(AgenteRecolectorBase):
         super().__init__(x, y, agent_id)
         self.mensajes: List[Dict[str, Any]] = []
         self.objetivos_reservados: Set[Tuple[int, int]] = set()
+        self.mensajes_enviados: int = 0
 
     def enviar_mensaje(self, otros_agentes, tipo: str, contenido: Any) -> None:
+        self.mensajes_enviados += len(otros_agentes)
         for agente in otros_agentes:
             if hasattr(agente, "recibir_mensaje"):
                 agente.recibir_mensaje(self.id, tipo, contenido)
@@ -152,12 +157,24 @@ class AgenteRecolectorComunicativo(AgenteRecolectorBase):
 
 
 class AgenteRecolectorConAprendizaje(AgenteRecolectorBase):
-    """Ejercicio 5: Agente que aprende áreas con más comida."""
+    """Ejercicio 5: Agente que aprende áreas con más comida y recuerda entre ejecuciones."""
 
     def __init__(self, x: int, y: int, agent_id: Optional[str] = None):
         super().__init__(x, y, agent_id)
         self.memoria_comida: Dict[Tuple[int, int], int] = {}  # (x,y): frecuencia
         self.areas_productivas: Set[Tuple[int, int]] = set()  # (area_x, area_y)
+        # Persistencia de áreas productivas entre ejecuciones
+        self._ruta_memoria = "mem_ej5_areas.npy"
+        self.cargar_memoria_areas()
+
+    def cargar_memoria_areas(self):
+        if os.path.exists(self._ruta_memoria):
+            data = np.load(self._ruta_memoria, allow_pickle=True).item()
+            self.areas_productivas = set(data.get("areas", []))
+
+    def guardar_memoria_areas(self):
+        data = {"areas": list(self.areas_productivas)}
+        np.save(self._ruta_memoria, data)
 
     def actualizar_memoria(self, posicion: Tuple[int, int], encontro_comida: bool) -> None:
         if posicion not in self.memoria_comida:
@@ -243,10 +260,9 @@ class AgenteCompetitivo(AgenteRecolectorComunicativo):
 
     def percibir(self, entorno):
         """Percibe comida y rivales cercanos."""
-        # Primero, percepción normal de comida (guarda _entorno)
         percepcion_comida = super().percibir(entorno)
 
-        # Detectar rivales cercanos
+        # Detectar rivales cercanos (radio 2)
         self.rivales_actuales = []
         for agente in entorno.agentes:
             if agente is not self:
@@ -270,36 +286,32 @@ class AgenteCompetitivo(AgenteRecolectorComunicativo):
         rivales = self.detectar_rivales_cercanos()
 
         if objetivo is None:
-            return True  # Nada que evaluar
+            return True
 
         if self.estrategia == "agresiva":
             return True  # Siempre competir
         if self.estrategia == "conservadora":
             return len(rivales) <= 1  # Competir solo si hay pocos rivales
         # 'evasiva'
-        return len(rivales) == 0  # Competir solo si no hay rivales
+        return len(rivales) == 0  # Solo si no hay rivales
 
     def decidir(self, percepcion) -> str:
         """
         Usa la lógica comunicativa base, pero puede abandonar el objetivo
         si la evaluación competitiva lo desaconseja.
         """
-        # Decisión propuesta por la lógica colaborativa/comunicativa
         decision = super().decidir(percepcion)
 
-        # Si tenemos un objetivo y un plan pendiente, evaluamos si vale la pena competir
         if self.objetivo_actual is not None and self.plan:
             quiere_competir = self.evaluar_competencia(self.objetivo_actual)
 
             if not quiere_competir:
-                # Renuncia al objetivo: cuenta como conflicto perdido potencial
+                # Renuncia al objetivo: lo contamos como conflicto perdido potencial
                 self.conflictos_perdidos += 1
                 self.plan = []
                 self.objetivo_actual = None
-                # Elegir un movimiento aleatorio en lugar de seguir el plan
                 return random.choice(["arriba", "abajo", "izquierda", "derecha"])
             else:
-                # Acepta competir; si hay rivales cerca, lo contamos como conflicto
                 if self.rivales_actuales:
                     self.conflictos_ganados += 1
 
