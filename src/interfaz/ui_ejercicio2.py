@@ -1,23 +1,24 @@
-# src/interfaz/ui_ejercicio1.py
+# src/interfaz/ui_ejercicio2.py
 import tkinter as tk
 
-from src.entornos.entorno_limpieza import EntornoLimpieza
-from src.agentes.agente_limpieza import AgenteLimpiezaConMemoria
-from src.config.parametros import CONFIG_EJERCICIO_1
+from src.entornos.entorno_limpieza import EntornoLimpiezaConTipos
+from src.agentes.agente_limpieza import AgenteLimpiezaConTipos
+from src.config.parametros import CONFIG_EJERCICIO_2
 from src.interfaz.gui_base import LimpiezaGUI
 
 
-class Ejercicio1GUI(LimpiezaGUI):
+class Ejercicio2GUI(LimpiezaGUI):
     def __init__(self, root: tk.Tk):
-        config = CONFIG_EJERCICIO_1
-        entorno = EntornoLimpieza(
+        config = CONFIG_EJERCICIO_2
+        entorno = EntornoLimpiezaConTipos(
             config["ancho_grid"], config["alto_grid"], config["num_suciedad"]
         )
-        agente = AgenteLimpiezaConMemoria(*config["posicion_agente"])
+        agente = AgenteLimpiezaConTipos(*config["posicion_agente"])
         entorno.agregar_agente(agente)
 
-        super().__init__(root, entorno, agente, "Ejercicio 1 - Limpieza con memoria")
+        super().__init__(root, entorno, agente, "Ejercicio 2 - Tipos de suciedad")
         self.max_pasos = config["max_pasos"]
+        self._log("Leyenda: P=Polvo, M=Mancha, B=Barro")
         self._log(f"Configuración: {config}")
 
     def realizar_paso(self) -> bool:
@@ -32,7 +33,7 @@ class Ejercicio1GUI(LimpiezaGUI):
         self._log(
             f"Paso {self.paso_actual}: pos=({self.agente.x},{self.agente.y}), "
             f"suciedad_limpiada={self.agente.suciedad_limpiada}, "
-            f"lugares_visitados={len(self.agente.lugares_visitados)}"
+            f"puntos_totales={self.agente.puntos_totales}"
         )
 
         if len(self.entorno.suciedad) == 0:
@@ -46,25 +47,21 @@ class Ejercicio1GUI(LimpiezaGUI):
         return False
 
     def mostrar_resumen(self):
-        total_celdas = self.entorno.ancho * self.entorno.alto
-        cobertura = (
-            len(self.agente.lugares_visitados) / total_celdas * 100
-            if total_celdas > 0
-            else 0
-        )
-
-        self._log("\n=== RESUMEN EJERCICIO 1 ===")
+        self._log("\n=== RESUMEN EJERCICIO 2 ===")
         self._log(f"Suciedad limpiada: {self.agente.suciedad_limpiada}")
-        self._log(f"Lugares visitados únicos: {len(self.agente.lugares_visitados)}")
-        self._log(f"Cobertura del entorno: {cobertura:.1f}%")
-        self._log(f"Pasos ejecutados: {self.paso_actual}")
+        self._log(f"Puntos totales: {self.agente.puntos_totales}")
+        self._log("Puntos por tipo de suciedad:")
+        for tipo, cantidad in self.agente.tipos_limpiados.items():
+            valor = self.entorno.tipos_suciedad[tipo]["valor"]
+            puntos = cantidad * valor
+            self._log(f"  {tipo}: {cantidad} × {valor} = {puntos}")
 
 
-def lanzar_ui_ejercicio1():
+def lanzar_ui_ejercicio2():
     root = tk.Tk()
-    Ejercicio1GUI(root)
+    Ejercicio2GUI(root)
     root.mainloop()
 
 
 if __name__ == "__main__":
-    lanzar_ui_ejercicio1()
+    lanzar_ui_ejercicio2()

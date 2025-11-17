@@ -2,4 +2,4 @@
 __version__ = "1.0.0"
 __author__ = "EjemplJorge"
 
-__all__ = ["agentes", "entornos", "utils", "config"]
+__all__ = ["agentes", "entornos", "utils", "config", "interfaz"]

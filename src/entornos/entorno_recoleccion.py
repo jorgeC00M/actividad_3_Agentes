@@ -14,19 +14,16 @@ class EntornoRecoleccion(EntornoBase):
         super().__init__(ancho, alto)
         self.comida: Dict[Tuple[int, int], int] = {}
         self.obstaculos: Set[Tuple[int, int]] = set()
-        # Primero obstáculos, luego comida para evitar superposición
         self._generar_obstaculos(num_obstaculos)
         self._generar_comida(num_comida)
 
     def _generar_obstaculos(self, cantidad: int):
-        """Genera obstáculos aleatorios en el grid."""
         for _ in range(cantidad):
             x = random.randint(0, self.ancho - 1)
             y = random.randint(0, self.alto - 1)
             self.obstaculos.add((x, y))
 
     def _generar_comida(self, cantidad: int):
-        """Genera comida aleatoria en el grid evitando obstáculos."""
         for _ in range(cantidad):
             x = random.randint(0, self.ancho - 1)
             y = random.randint(0, self.alto - 1)
@@ -62,7 +59,7 @@ class EntornoRecoleccion(EntornoBase):
 
 
 class EntornoRecoleccionCompetitivo(EntornoRecoleccion):
-    """Ejercicio 6: Entorno con recursos limitados para competencia."""
+    """Ejercicio 6: Entorno con pocos recursos para generar competencia."""
 
     def __init__(
         self, ancho: int, alto: int, num_comida: int = 5, num_obstaculos: int = 5
@@ -70,6 +67,6 @@ class EntornoRecoleccionCompetitivo(EntornoRecoleccion):
         super().__init__(ancho, alto, num_comida, num_obstaculos)
 
     def actualizar(self):
-        """En entorno competitivo, la comida puede reaparecer lentamente."""
+        # Reposición lenta de comida si casi no hay
         if self.tiempo % 10 == 0 and len(self.comida) < 3:
             self._generar_comida(1)

@@ -29,10 +29,7 @@ class AgenteBase(ABC):
         ...
 
     def ciclo_vida(self, entorno) -> bool:
-        """
-        Ejecuta el ciclo completo de percepción-decisión-acción.
-        Devuelve False si el agente ya no está activo.
-        """
+        """Ejecuta el ciclo completo de percepción-decisión-acción."""
         if not self.activo or self.energia <= 0:
             return False
 

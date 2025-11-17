@@ -12,18 +12,15 @@ class EntornoBase(ABC):
         self.tiempo = 0
 
     def es_valida(self, x: int, y: int) -> bool:
-        """Verifica si una posición está dentro del grid."""
         return 0 <= x < self.ancho and 0 <= y < self.alto
 
     def agregar_agente(self, agente):
-        """Añade un agente al entorno."""
         if self.es_valida(agente.x, agente.y):
             self.agentes.append(agente)
             return True
         return False
 
     def remover_agente(self, agente):
-        """Remueve un agente del entorno."""
         if agente in self.agentes:
             self.agentes.remove(agente)
             return True
@@ -31,14 +28,11 @@ class EntornoBase(ABC):
 
     @abstractmethod
     def actualizar(self):
-        """Actualiza el estado del entorno."""
         ...
 
     def ejecutar_paso(self):
-        """Ejecuta un paso de simulación para todos los agentes."""
         agentes_activos = []
-
-        for agente in self.agentes[:]:  # Copia para poder remover
+        for agente in self.agentes[:]:
             if agente.ciclo_vida(self):
                 agentes_activos.append(agente)
             else:

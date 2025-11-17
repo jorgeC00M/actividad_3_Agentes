@@ -11,6 +11,7 @@ class AgenteLimpiezaBase(AgenteBase):
     def __init__(self, x: int, y: int):
         super().__init__(x, y)
         self.suciedad_limpiada = 0
+        # Para mostrar el camino / pasos en interfaz o consola
         self.historial_movimientos: List[Dict[str, Any]] = []
 
     def registrar_paso(self, accion: str):
@@ -24,11 +25,11 @@ class AgenteLimpiezaBase(AgenteBase):
         )
 
     def percibir(self, entorno) -> bool:
-        """Percibe si hay suciedad en su celda actual."""
+        """Percibe si hay suciedad en la celda actual."""
         return entorno.hay_suciedad(self.x, self.y)
 
     def decidir(self, percepcion: bool) -> str:
-        """Si hay suciedad, limpia; si no, se mueve aleatoriamente."""
+        """Decisión básica: limpiar si hay suciedad, sino moverse al azar."""
         if percepcion:
             return "limpiar"
         return random.choice(["arriba", "abajo", "izquierda", "derecha"])
@@ -44,7 +45,11 @@ class AgenteLimpiezaBase(AgenteBase):
 
 
 class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
-    """Ejercicio 1: Agente que recuerda lugares visitados y NO repite celdas."""
+    """
+    Ejercicio 1:
+    Agente que recuerda lugares visitados y trata de NO ir 2 veces a la misma celda.
+    Si todas las celdas vecinas ya fueron visitadas → se queda en 'esperar'.
+    """
 
     def __init__(self, x: int, y: int):
         super().__init__(x, y)
@@ -52,13 +57,14 @@ class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
         self.ultima_direccion: Optional[str] = None
 
     def decidir(self, percepcion: bool) -> str:
-        # Registrar posición actual
+        # Registrar la celda actual como visitada
         self.lugares_visitados.add((self.x, self.y))
 
         if percepcion:
+            # Primero limpiar si hay suciedad
             return "limpiar"
 
-        # Priorizar direcciones hacia celdas NO visitadas
+        # Buscar direcciones hacia celdas NO visitadas
         direcciones_no_visitadas = []
         for dx, dy, direccion in [
             (0, -1, "arriba"),
@@ -67,6 +73,7 @@ class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
             (1, 0, "derecha"),
         ]:
             nx, ny = self.x + dx, self.y + dy
+            # No filtramos por entorno.es_valida aquí: mover() ya valida bordes
             if (nx, ny) not in self.lugares_visitados:
                 direcciones_no_visitadas.append(direccion)
 
@@ -74,7 +81,7 @@ class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
             self.ultima_direccion = random.choice(direcciones_no_visitadas)
             return self.ultima_direccion
 
-        # Si TODO alrededor ya fue visitado, se queda en espera (no repite)
+        # Todas las vecinas ya visitadas → no moverse para no repetir
         return "esperar"
 
     def actuar(self, decision: str, entorno) -> None:
@@ -82,7 +89,7 @@ class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
             if entorno.limpiar(self.x, self.y):
                 self.suciedad_limpiada += 1
         elif decision == "esperar":
-            # No se mueve ni gasta energía
+            # No gastar energía, solo registrar paso
             pass
         else:
             self.mover(decision, entorno)
@@ -91,21 +98,24 @@ class AgenteLimpiezaConMemoria(AgenteLimpiezaBase):
 
 
 class AgenteLimpiezaConTipos(AgenteLimpiezaBase):
-    """Ejercicio 2: Agente que maneja diferentes tipos de suciedad."""
+    """
+    Ejercicio 2:
+    Agente que maneja tipos de suciedad con distintos valores (puntaje).
+    """
 
     def __init__(self, x: int, y: int):
         super().__init__(x, y)
         self.tipos_limpiados: Dict[str, int] = {}
-        self.puntos_totales = 0
+        self.puntos_totales: int = 0
 
-    def decidir(self, percepcion: Any) -> str:
+    def decidir(self, percepcion: bool) -> str:
         if percepcion:
             return "limpiar"
         return random.choice(["arriba", "abajo", "izquierda", "derecha"])
 
     def actuar(self, decision: str, entorno) -> None:
         if decision == "limpiar":
-            resultado: Optional[Tuple[str, int]] = entorno.limpiar(self.x, self.y)
+            resultado = entorno.limpiar(self.x, self.y)
             if resultado:
                 tipo, puntos = resultado
                 self.suciedad_limpiada += 1
@@ -119,8 +129,12 @@ class AgenteLimpiezaConTipos(AgenteLimpiezaBase):
 
 class AgenteLimpiezaConEvasion(AgenteLimpiezaBase):
     """
-    Ejercicio 3: Agente que evita obstáculos.
-    Proceso: DETECTAR -> EVITAR -> REPLANIFICAR.
+    Ejercicio 3:
+    Agente que DETECTA → EVITA → REPLANIFICA frente a obstáculos.
+
+    - Escanea en un radio de 1 (3x3 alrededor) con nombres:
+      arriba-izquierda, arriba, arriba-derecha, etc.
+    - Además guarda obstáculos en un radio de 2 en obstaculos_detectados.
     """
 
     def __init__(self, x: int, y: int):
@@ -129,8 +143,11 @@ class AgenteLimpiezaConEvasion(AgenteLimpiezaBase):
         self.ultimo_scan: List[Dict[str, Any]] = []
 
     def escanear_obstaculos(self, entorno):
-        """Escanea un radio de 1 casilla alrededor y guarda reporte detallado."""
+        """Escanea alrededor y guarda información textual para la interfaz/consola."""
         self.ultimo_scan.clear()
+
+        # 1) Scan fino en radio 1 para la descripción tipo:
+        # Arriba-izquierda, Arriba, ...
         etiquetas = {
             (-1, -1): "arriba-izquierda",
             (0, -1): "arriba",
@@ -156,8 +173,14 @@ class AgenteLimpiezaConEvasion(AgenteLimpiezaBase):
                     }
                 )
 
+        # 2) Scan más amplio (radio 2) para acumular memoria de obstáculos
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                nx, ny = self.x + dx, self.y + dy
+                if entorno.es_valida(nx, ny) and entorno.hay_obstaculo(nx, ny):
+                    self.obstaculos_detectados.add((nx, ny))
+
     def percibir(self, entorno) -> bool:
-        """Detecta suciedad y escanea obstáculos cercanos."""
         self.escanear_obstaculos(entorno)
         return super().percibir(entorno)
 
@@ -165,7 +188,7 @@ class AgenteLimpiezaConEvasion(AgenteLimpiezaBase):
         if percepcion:
             return "limpiar"
 
-        # EVITAR: filtrar direcciones seguras
+        # REPLANIFICAR → buscar direcciones seguras sin obstáculos detectados
         direcciones_seguras = []
         for dx, dy, direccion in [
             (0, -1, "arriba"),
@@ -178,10 +201,9 @@ class AgenteLimpiezaConEvasion(AgenteLimpiezaBase):
                 direcciones_seguras.append(direccion)
 
         if direcciones_seguras:
-            # REPLANIFICAR: elegir entre las seguras
             return random.choice(direcciones_seguras)
 
-        # Si todo alrededor está marcado como peligroso, no moverse
+        # Rodeado de obstáculos → mejor esperar
         return "esperar"
 
     def actuar(self, decision: str, entorno) -> None:

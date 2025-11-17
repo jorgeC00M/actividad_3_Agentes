@@ -2,15 +2,12 @@
 from typing import Dict, Any, List
 import time
 
-import numpy as np
-import matplotlib.pyplot as plt
-
 
 class EstadisticasLimpieza:
     """Recolecta estadísticas para simulaciones de limpieza."""
 
     def __init__(self):
-        self.datos = {
+        self.datos: Dict[str, List[Any]] = {
             "tiempos": [],
             "suciedad_limpiada": [],
             "lugares_visitados": [],
@@ -19,14 +16,11 @@ class EstadisticasLimpieza:
         self.inicio_tiempo = None
 
     def iniciar(self):
-        """Inicia el contador de tiempo."""
         self.inicio_tiempo = time.time()
 
     def registrar_paso(self, entorno, agente):
-        """Registra datos del paso actual."""
-        tiempo_actual = time.time() - self.inicio_tiempo if self.inicio_tiempo else 0
-
-        self.datos["tiempos"].append(tiempo_actual)
+        t = time.time() - self.inicio_tiempo if self.inicio_tiempo else 0
+        self.datos["tiempos"].append(t)
         self.datos["suciedad_limpiada"].append(
             getattr(agente, "suciedad_limpiada", 0)
         )
@@ -34,64 +28,28 @@ class EstadisticasLimpieza:
             len(getattr(agente, "lugares_visitados", set()))
         )
 
-        # Calcular eficiencia de cobertura
         total_celdas = entorno.ancho * entorno.alto
-        if hasattr(agente, "lugares_visitados"):
-            eficiencia = len(agente.lugares_visitados) / total_celdas * 100
-            self.datos["eficiencia"].append(eficiencia)
+        if hasattr(agente, "lugares_visitados") and total_celdas > 0:
+            eff = len(agente.lugares_visitados) / total_celdas * 100
+            self.datos["eficiencia"].append(eff)
 
     def mostrar_resumen(self, agente):
-        """Muestra resumen de estadísticas."""
-        print("=== ESTADÍSTICAS FINALES ===")
+        print("=== ESTADÍSTICAS FINALES (LIMPIEZA) ===")
         print(f"Suciedad limpiada: {getattr(agente, 'suciedad_limpiada', 0)}")
-        print(
-            f"Lugares visitados: {len(getattr(agente, 'lugares_visitados', set()))}"
-        )
-
+        print(f"Lugares visitados: {len(getattr(agente, 'lugares_visitados', set()))}")
         if hasattr(agente, "puntos_totales"):
             print(f"Puntos totales: {agente.puntos_totales}")
-
         if hasattr(agente, "tipos_limpiados"):
             print(f"Tipos limpiados: {agente.tipos_limpiados}")
-
         if self.datos["eficiencia"]:
             print(f"Eficiencia: {self.datos['eficiencia'][-1]:.1f}%")
-
-    def graficar(self, titulo="Evolución de la limpieza"):
-        if not self.datos["tiempos"]:
-            print("No hay datos para graficar.")
-            return
-
-        tiempos = np.array(self.datos["tiempos"])
-        suciedad = np.array(self.datos["suciedad_limpiada"])
-        eficiencia = (
-            np.array(self.datos["eficiencia"])
-            if self.datos["eficiencia"]
-            else None
-        )
-
-        plt.figure()
-        plt.plot(tiempos, suciedad, label="Suciedad limpiada")
-        if eficiencia is not None:
-            plt.plot(
-                tiempos[: len(eficiencia)],
-                eficiencia,
-                linestyle="--",
-                label="Eficiencia (%)",
-            )
-        plt.xlabel("Tiempo (s)")
-        plt.ylabel("Valor")
-        plt.title(titulo)
-        plt.legend()
-        plt.grid(True)
-        plt.show()
 
 
 class EstadisticasRecoleccion:
     """Recolecta estadísticas para simulaciones de recolección."""
 
     def __init__(self):
-        self.datos = {
+        self.datos: Dict[str, List[Any]] = {
             "tiempos": [],
             "comida_recolectada": [],
             "agentes_activos": [],
@@ -99,54 +57,30 @@ class EstadisticasRecoleccion:
         }
 
     def registrar_paso(self, entorno, agentes):
-        """Registra datos del paso actual."""
         self.datos["tiempos"].append(entorno.tiempo)
         self.datos["comida_recolectada"].append(
             sum(getattr(a, "comida_recolectada", 0) for a in agentes)
         )
         self.datos["agentes_activos"].append(len(agentes))
 
-        # Contar conflictos
         conflictos = 0
-        for agente in agentes:
-            conflictos += getattr(agente, "conflictos_ganados", 0)
-            conflictos += getattr(agente, "conflictos_perdidos", 0)
+        for a in agentes:
+            conflictos += getattr(a, "conflictos_ganados", 0)
+            conflictos += getattr(a, "conflictos_perdidos", 0)
         self.datos["conflictos"].append(conflictos)
 
     def mostrar_resumen(self, agentes):
-        """Muestra resumen de estadísticas."""
-        print("=== ESTADÍSTICAS FINALES ===")
+        print("=== ESTADÍSTICAS FINALES (RECOLECCIÓN) ===")
         if self.datos["comida_recolectada"]:
             print(
                 f"Total comida recolectada: {self.datos['comida_recolectada'][-1]}"
             )
         print(f"Agentes activos: {len(agentes)}")
-
-        for agente in agentes:
-            print(f"\nAgente {getattr(agente, 'id', 'N/A')}:")
-            print(f"  Comida: {getattr(agente, 'comida_recolectada', 0)}")
-            print(f"  Energía: {agente.energia}")
-
-            if hasattr(agente, "conflictos_ganados"):
-                print(f"  Conflictos ganados: {agente.conflictos_ganados}")
-            if hasattr(agente, "conflictos_perdidos"):
-                print(f"  Conflictos perdidos: {agente.conflictos_perdidos}")
-
-    def graficar(self, titulo="Recolección de recursos"):
-        if not self.datos["tiempos"]:
-            print("No hay datos para graficar.")
-            return
-
-        tiempos = np.array(self.datos["tiempos"])
-        comida = np.array(self.datos["comida_recolectada"])
-        conflictos = np.array(self.datos["conflictos"])
-
-        plt.figure()
-        plt.plot(tiempos, comida, label="Comida total")
-        plt.plot(tiempos, conflictos, linestyle="--", label="Conflictos acumulados")
-        plt.xlabel("Paso de simulación")
-        plt.ylabel("Valor")
-        plt.title(titulo)
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+        for a in agentes:
+            print(f"\nAgente {getattr(a, 'id', 'N/A')}:")
+            print(f"  Comida: {getattr(a, 'comida_recolectada', 0)}")
+            print(f"  Energía: {a.energia}")
+            if hasattr(a, "conflictos_ganados"):
+                print(f"  Conflictos ganados: {a.conflictos_ganados}")
+            if hasattr(a, "conflictos_perdidos"):
+                print(f"  Conflictos perdidos: {a.conflictos_perdidos}")

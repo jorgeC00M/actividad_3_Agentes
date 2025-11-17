@@ -1,6 +1,5 @@
 # src/config/parametros.py
 
-# Configuración Ejercicio 1: Agente con memoria
 CONFIG_EJERCICIO_1 = {
     "ancho_grid": 6,
     "alto_grid": 6,
@@ -9,7 +8,6 @@ CONFIG_EJERCICIO_1 = {
     "posicion_agente": (3, 3),
 }
 
-# Configuración Ejercicio 2: Tipos de suciedad
 CONFIG_EJERCICIO_2 = {
     "ancho_grid": 5,
     "alto_grid": 5,
@@ -18,7 +16,6 @@ CONFIG_EJERCICIO_2 = {
     "posicion_agente": (2, 2),
 }
 
-# Configuración Ejercicio 3: Evasión de obstáculos
 CONFIG_EJERCICIO_3 = {
     "ancho_grid": 8,
     "alto_grid": 8,
@@ -28,7 +25,6 @@ CONFIG_EJERCICIO_3 = {
     "posicion_agente": (4, 4),
 }
 
-# Configuración Ejercicio 4: Comunicación entre agentes
 CONFIG_EJERCICIO_4 = {
     "ancho_grid": 10,
     "alto_grid": 10,
@@ -38,7 +34,6 @@ CONFIG_EJERCICIO_4 = {
     "max_pasos": 60,
 }
 
-# Configuración Ejercicio 5: Memoria espacial
 CONFIG_EJERCICIO_5 = {
     "ancho_grid": 8,
     "alto_grid": 8,
@@ -48,11 +43,10 @@ CONFIG_EJERCICIO_5 = {
     "posicion_agente": (0, 0),
 }
 
-# Configuración Ejercicio 6: Sistema competitivo
 CONFIG_EJERCICIO_6 = {
     "ancho_grid": 12,
     "alto_grid": 12,
-    "num_comida": 10,  # Pocos recursos para competencia
+    "num_comida": 10,
     "num_obstaculos": 10,
     "num_agentes": 4,
     "max_pasos": 80,
